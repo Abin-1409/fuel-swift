@@ -1,103 +1,207 @@
-import Image from "next/image";
+// pages/index.js
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+'use client';
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+
+export default function ServiceSelection() {
+  const router = useRouter();
+  const [stock, setStock] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
+  // Mock stock data - replace with actual API call
+  useEffect(() => {
+    const fetchStock = async () => {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setStock({
+        petrol: 850,  // liters available
+        diesel: 620,  // liters available
+        ev: 4,        // available charging stations
+        air: 2        // available air pumps
+      });
+      setLastUpdated(new Date());
+      setLoading(false);
+    };
+
+    fetchStock();
+    
+    // Real implementation would have interval for live updates
+    const interval = setInterval(fetchStock, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleServiceSelect = (service) => {
+    // Check stock availability
+    const isAvailable = {
+      petrol: stock.petrol > 100,
+      diesel: stock.diesel > 100,
+      ev: stock.ev > 0,
+      air: stock.air > 0
+    };
+
+    if (isAvailable[service]) {
+      router.push(`/request?service=${service}`);
+    } else {
+      alert(`${service.charAt(0).toUpperCase() + service.slice(1)} service is currently unavailable`);
+    }
+  };
+
+  // Service configuration
+  const services = [
+    { 
+      id: 'petrol',
+      name: 'Petrol',
+      icon: '⛽',
+      description: 'Fuel delivery for petrol vehicles',
+      minStock: 100,
+      unit: 'liters',
+      color: 'from-blue-500 to-blue-600'
+    },
+    { 
+      id: 'diesel',
+      name: 'Diesel',
+      icon: '⛽',
+      description: 'Fuel delivery for diesel vehicles',
+      minStock: 100,
+      unit: 'liters',
+      color: 'from-green-500 to-green-600'
+    },
+    { 
+      id: 'ev',
+      name: 'EV Charging',
+      icon: '🔌',
+      description: 'Mobile electric vehicle charging',
+      minStock: 1,
+      unit: 'stations',
+      color: 'from-purple-500 to-purple-600'
+    },
+    { 
+      id: 'air',
+      name: 'Air Filling',
+      icon: '💨',
+      description: 'Tire inflation service',
+      minStock: 1,
+      unit: 'pumps',
+      color: 'from-orange-500 to-orange-600'
+    }
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-6 text-gray-600 text-lg font-medium">Checking service availability...</p>
+          <p className="mt-2 text-gray-500 text-sm">This may take a moment</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+        <motion.header 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-16"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-4">
+            Select Your Service
+          </h1>
+          <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+            Real-time availability shown below. Services are only available when sufficient stock is present.
+          </p>
+          <div className="mt-4 text-sm text-gray-500">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </div>
+        </motion.header>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {services.map((service, index) => {
+            const currentStock = stock[service.id] || 0;
+            const isAvailable = currentStock >= service.minStock;
+            const stockPercentage = Math.min(Math.round((currentStock / (service.minStock * 2)) * 100), 100);
+
+            return (
+              <motion.div 
+                key={service.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => handleServiceSelect(service.id)}
+                className={`relative rounded-2xl p-8 shadow-lg transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
+                  ${isAvailable 
+                    ? 'bg-white hover:shadow-xl border-2 border-transparent hover:border-blue-500' 
+                    : 'bg-gray-100 opacity-75'}`
+                }
+              >
+                <div className="flex items-start space-x-6">
+                  <div className={`p-4 rounded-xl bg-gradient-to-br ${service.color} text-white text-4xl`}>
+                    {service.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-2xl font-bold text-gray-900">{service.name}</h3>
+                      <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
+                        isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {isAvailable ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 mt-2 text-lg">{service.description}</p>
+                    
+                    <div className="mt-6">
+                      <div className="flex justify-between text-sm text-gray-700 mb-2">
+                        <span className="font-medium">Current stock:</span>
+                        <span className="font-medium">{currentStock} {service.unit}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${stockPercentage}%` }}
+                          transition={{ duration: 0.5 }}
+                          className={`h-3 rounded-full ${
+                            stockPercentage > 70 ? 'bg-green-500' : 
+                            stockPercentage > 30 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                        ></motion.div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {!isAvailable && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center rounded-2xl backdrop-blur-sm"
+                  >
+                    <span className="bg-red-500 text-white px-6 py-3 rounded-lg font-medium text-lg">
+                      Check back later
+                    </span>
+                  </motion.div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-16 text-center text-gray-500 text-sm bg-white/50 backdrop-blur-sm p-4 rounded-xl"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <p className="font-medium">Stock levels update in real-time. Minimum stock requirements:</p>
+          <p className="mt-1">Petrol/Diesel: 100+ liters | EV: 1+ station | Air: 1+ pump</p>
+        </motion.div>
+      </div>
     </div>
   );
 }
