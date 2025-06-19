@@ -4,223 +4,233 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
 export default function Home() {
   const router = useRouter();
-  const [stock, setStock] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [activeFeature, setActiveFeature] = useState(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  // Mock stock data - replace with actual API call
   useEffect(() => {
-    const fetchStock = async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setStock({
-        petrol: 850,  // liters available
-        diesel: 620,  // liters available
-        ev: 4,        // available charging stations
-        air: 2,       // available air pumps
-        mechanical: 3 // available mechanics
-      });
-      setLastUpdated(new Date());
-      setLoading(false);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
     };
-
-    fetchStock();
-    
-    // Real implementation would have interval for live updates
-    const interval = setInterval(fetchStock, 30000);
-    return () => clearInterval(interval);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleServiceSelect = (service) => {
-    // Check stock availability
-    const isAvailable = {
-      petrol: stock.petrol > 100,
-      diesel: stock.diesel > 100,
-      ev: stock.ev > 0,
-      air: stock.air > 0,
-      mechanical: stock.mechanical > 0
-    };
-
-    if (isAvailable[service]) {
-      router.push(`/request?service=${service}`);
-    } else {
-      alert(`${service.charAt(0).toUpperCase() + service.slice(1)} service is currently unavailable`);
-    }
-  };
-
-  // Service configuration
-  const services = [
-    { 
-      id: 'petrol',
-      name: 'Petrol',
-      icon: '⛽',
-      description: 'Fuel delivery for petrol vehicles',
-      minStock: 100,
-      unit: 'liters',
-      color: 'from-blue-500 to-blue-600'
-    },
-    { 
-      id: 'diesel',
-      name: 'Diesel',
-      icon: '⛽',
-      description: 'Fuel delivery for diesel vehicles',
-      minStock: 100,
-      unit: 'liters',
-      color: 'from-green-500 to-green-600'
-    },
-    { 
-      id: 'ev',
-      name: 'EV Charging',
-      icon: '🔌',
-      description: 'Mobile electric vehicle charging',
-      minStock: 1,
-      unit: 'stations',
-      color: 'from-purple-500 to-purple-600'
-    },
-    { 
-      id: 'air',
-      name: 'Air Filling',
-      icon: '💨',
-      description: 'Tire inflation service',
-      minStock: 1,
-      unit: 'pumps',
-      color: 'from-orange-500 to-orange-600'
-    },
-    { 
-      id: 'mechanical',
-      name: 'Mechanical Work',
-      icon: '🔧',
-      description: 'On-site vehicle repair and maintenance',
-      minStock: 1,
-      unit: 'mechanics',
-      color: 'from-red-500 to-red-600'
-    }
-  ];
 
   const features = [
     {
-      title: 'Emergency Fuel Delivery',
-      description: 'Get fuel delivered to your location when you run out of gas. No more pushing your vehicle to the nearest station.',
+      title: 'Premium Fuel Delivery',
+      description: 'Experience luxury-grade fuel delivery with our state-of-the-art mobile units. Available 24/7 for your convenience.',
       icon: '⛽',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-blue-500 to-blue-600',
+      gradient: 'from-blue-400/20 to-blue-600/20',
+      stats: ['99.9% Purity', '24/7 Service', 'Premium Quality']
     },
     {
-      title: 'EV Charging',
-      description: 'Mobile electric vehicle charging service for when you need a quick power boost on the go.',
+      title: 'Elite EV Charging',
+      description: 'Cutting-edge mobile charging solutions for your electric vehicle. Fast, efficient, and environmentally conscious.',
       icon: '🔌',
-      color: 'from-green-500 to-green-600'
+      color: 'from-green-500 to-green-600',
+      gradient: 'from-green-400/20 to-green-600/20',
+      stats: ['Fast Charging', 'Smart Monitoring', 'Eco-Friendly']
     },
     {
-      title: 'Air Filling',
-      description: 'Professional tire inflation service to ensure your vehicle\'s optimal performance and safety.',
+      title: 'Precision Air Service',
+      description: 'Professional tire care with advanced pressure monitoring systems. Ensuring optimal performance and safety.',
       icon: '💨',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-purple-600',
+      gradient: 'from-purple-400/20 to-purple-600/20',
+      stats: ['Precision Control', 'Safety First', 'Expert Service']
     },
     {
-      title: 'Mechanical Support',
-      description: 'On-site mechanical assistance for minor repairs and maintenance when you need it most.',
+      title: 'Premium Mechanical Care',
+      description: 'Elite mechanical assistance with certified professionals. Comprehensive care for your vehicle.',
       icon: '🔧',
-      color: 'from-orange-500 to-orange-600'
+      color: 'from-orange-500 to-orange-600',
+      gradient: 'from-orange-400/20 to-orange-600/20',
+      stats: ['Expert Technicians', 'Quality Parts', 'Premium Service']
     }
   ];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center">
-          <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-6 text-gray-600 text-lg font-medium">Checking service availability...</p>
-          <p className="mt-2 text-gray-500 text-sm">This may take a moment</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600">
-        <div className="absolute inset-0 bg-black opacity-20"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-24 text-center relative">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900/50"></div>
+        
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0">
+          <motion.div
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{
+              scale: [1.2, 1, 1.2],
+              rotate: [90, 0, 90],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+            className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full blur-3xl"
+          />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-24 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.8 }}
             className="text-white"
           >
-            <h1 className="text-5xl sm:text-7xl font-bold mb-8 leading-tight">
-              Never Get Stranded Again
-            </h1>
-            <p className="text-xl sm:text-2xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed">
-              FuelSwift brings emergency fuel delivery and vehicle services right to your location. 
-              Fast, reliable, and convenient solutions for all your roadside needs.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-6xl sm:text-8xl font-bold mb-8 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+            >
+              AutoNest
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="text-2xl sm:text-3xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed"
+            >
+              Elevating Your Journey with Roadside Excellence
+            </motion.p>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="flex flex-col sm:flex-row gap-6 justify-center"
+            >
               <button
                 onClick={() => router.push('/service')}
-                className="px-10 py-4 bg-white text-blue-600 rounded-xl font-bold text-lg hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="group px-10 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden"
               >
-                Services
+                <span className="relative z-10">Explore Services</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
               <button
                 onClick={() => router.push('/register')}
-                className="px-10 py-4 bg-transparent text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-all duration-300 border-2 border-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="group px-10 py-4 bg-transparent text-white rounded-xl font-bold text-lg transition-all duration-300 border-2 border-white/30 hover:border-white shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden"
               >
-                Sign Up Now
+                <span className="relative z-10">Join Elite</span>
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
 
-        {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full">
-            <path
-              fill="#ffffff"
-              fillOpacity="1"
-              d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,149.3C960,160,1056,160,1152,138.7C1248,117,1344,75,1392,53.3L1440,32L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
-            ></path>
-          </svg>
-        </div>
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+        >
+          <motion.div
+            animate={{
+              y: [0, 10, 0],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center"
+          >
+            <motion.div
+              animate={{
+                y: [0, 12, 0],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="w-1 h-3 bg-white/50 rounded-full mt-2"
+            />
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-white">
+      <section className="py-24 bg-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
             className="text-center mb-20"
           >
             <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Our Services
+              Premium Services
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Comprehensive roadside assistance services to keep you moving, no matter what.
+              Experience excellence in every aspect of our  roadside assistance services.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-gray-100"
+                viewport={{ once: true }}
+                onHoverStart={() => setActiveFeature(index)}
+                onHoverEnd={() => setActiveFeature(null)}
+                className={`relative rounded-2xl p-8 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
+                  ${activeFeature === index ? 'shadow-2xl' : 'shadow-xl'} 
+                  bg-gradient-to-br ${feature.gradient} border border-white/20 backdrop-blur-sm`}
               >
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} text-white text-3xl flex items-center justify-center mb-6 shadow-lg`}>
-                  {feature.icon}
+                <div className="flex items-start space-x-6">
+                  <motion.div 
+                    animate={{ 
+                      scale: activeFeature === index ? 1.1 : 1,
+                      rotate: activeFeature === index ? 5 : 0
+                    }}
+                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} text-white text-3xl flex items-center justify-center shadow-lg`}
+                  >
+                    {feature.icon}
+                  </motion.div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">{feature.title}</h3>
+                    <p className="text-gray-600 text-lg leading-relaxed mb-6">{feature.description}</p>
+                    <div className="flex flex-wrap gap-3">
+                      {feature.stats.map((stat, idx) => (
+                        <motion.span
+                          key={idx}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.1 }}
+                          className="px-4 py-2 bg-white/50 rounded-full text-sm font-medium text-gray-700"
+                        >
+                          {stat}
+                        </motion.span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                <p className="text-gray-600 text-lg leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -228,33 +238,36 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-blue-600 to-purple-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
+      <section className="py-24 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
             className="text-white"
           >
-            <h2 className="text-4xl sm:text-5xl font-bold mb-8">
-              Ready to Experience Hassle-Free Roadside Assistance?
+            <h2 className="text-4xl sm:text-5xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+              Join the Elite Circle
             </h2>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed">
-              Join thousands of satisfied customers who trust FuelSwift for their emergency vehicle needs.
+              Experience roadside assistance like never before. Join our exclusive community of discerning drivers.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <button
                 onClick={() => router.push('/register')}
-                className="px-10 py-4 bg-white text-blue-600 rounded-xl font-bold text-lg hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="group px-10 py-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden"
               >
-                Sign Up Now
+                <span className="relative z-10">Become a Member</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
               <button
                 onClick={() => router.push('/login')}
-                className="px-10 py-4 bg-transparent text-white rounded-xl font-bold text-lg hover:bg-white/10 transition-all duration-300 border-2 border-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="group px-10 py-4 bg-transparent text-white rounded-xl font-bold text-lg transition-all duration-300 border-2 border-white/30 hover:border-white shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden"
               >
-                Login
+                <span className="relative z-10">Access Portal</span>
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             </div>
           </motion.div>
@@ -262,17 +275,18 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <footer className="bg-gray-900 text-white py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div>
-              <h3 className="text-2xl font-bold mb-6">FuelSwift</h3>
+              <h3 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">AutoNest</h3>
               <p className="text-gray-400 text-lg leading-relaxed">
-                Your trusted partner for emergency roadside assistance and fuel delivery services.
+                Elevating the standards of premium roadside assistance with unmatched excellence.
               </p>
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-6">Quick Links</h3>
+              <h3 className="text-2xl font-bold mb-6 text-white">Quick Links</h3>
               <ul className="space-y-4">
                 <li><Link href="/" className="text-gray-400 hover:text-white text-lg transition-colors duration-300">Home</Link></li>
                 <li><Link href="/service" className="text-gray-400 hover:text-white text-lg transition-colors duration-300">Services</Link></li>
@@ -281,11 +295,11 @@ export default function Home() {
               </ul>
             </div>
             <div>
-              <h3 className="text-2xl font-bold mb-6">Contact Us</h3>
+              <h3 className="text-2xl font-bold mb-6 text-white">Contact Us</h3>
               <ul className="space-y-4 text-gray-400 text-lg">
                 <li className="flex items-center space-x-3">
                   <span>📧</span>
-                  <span>support@fuelswift.com</span>
+                  <span>elite@autonest.com</span>
                 </li>
                 <li className="flex items-center space-x-3">
                   <span>📞</span>
@@ -293,13 +307,13 @@ export default function Home() {
                 </li>
                 <li className="flex items-center space-x-3">
                   <span>⏰</span>
-                  <span>24/7 Emergency Support</span>
+                  <span>24/7 Elite Support</span>
                 </li>
               </ul>
             </div>
           </div>
           <div className="mt-16 pt-8 border-t border-gray-800 text-center">
-            <p className="text-gray-400 text-lg">&copy; {new Date().getFullYear()} FuelSwift. All rights reserved.</p>
+            <p className="text-gray-400 text-lg">&copy; {new Date().getFullYear()} AutoNest. All rights reserved.</p>
           </div>
         </div>
       </footer>

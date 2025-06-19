@@ -4,40 +4,38 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ServiceSelection() {
   const router = useRouter();
   const [stock, setStock] = useState({});
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [selectedService, setSelectedService] = useState(null);
+  const [hoveredService, setHoveredService] = useState(null);
 
   // Mock stock data - replace with actual API call
   useEffect(() => {
     const fetchStock = async () => {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
       setStock({
-        petrol: 850,  // liters available
-        diesel: 620,  // liters available
-        ev: 4,        // available charging stations
-        air: 2,       // available air pumps
-        mechanical: 3 // available mechanics
+        petrol: 850,
+        diesel: 620,
+        ev: 4,
+        air: 2,
+        mechanical: 3
       });
       setLastUpdated(new Date());
       setLoading(false);
     };
 
     fetchStock();
-    
-    // Real implementation would have interval for live updates
     const interval = setInterval(fetchStock, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const handleServiceSelect = (service) => {
-    // Check stock availability
     const isAvailable = {
       petrol: stock.petrol > 100,
       diesel: stock.diesel > 100,
@@ -47,13 +45,33 @@ export default function ServiceSelection() {
     };
 
     if (isAvailable[service]) {
-      router.push(`/request?service=${service}`);
+      setSelectedService(service);
+      setTimeout(() => {
+        switch (service) {
+          case 'petrol':
+            router.push('/petrol_service');
+            break;
+          case 'diesel':
+            router.push('/diesel_service');
+            break;
+          case 'ev':
+            router.push('/electric');
+            break;
+          case 'air':
+            router.push('/air');
+            break;
+          case 'mechanical':
+            router.push('/mechanical');
+            break;
+          default:
+            router.push('/request?service=' + service);
+        }
+      }, 500);
     } else {
       alert(`${service.charAt(0).toUpperCase() + service.slice(1)} service is currently unavailable`);
     }
   };
 
-  // Service configuration
   const services = [
     { 
       id: 'petrol',
@@ -62,7 +80,9 @@ export default function ServiceSelection() {
       description: 'Fuel delivery for petrol vehicles',
       minStock: 100,
       unit: 'liters',
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-blue-500 to-blue-600',
+      gradient: 'from-blue-400/20 to-blue-600/20',
+      features: ['24/7 Delivery', 'Quality Assured', 'Quick Service']
     },
     { 
       id: 'diesel',
@@ -71,7 +91,9 @@ export default function ServiceSelection() {
       description: 'Fuel delivery for diesel vehicles',
       minStock: 100,
       unit: 'liters',
-      color: 'from-green-500 to-green-600'
+      color: 'from-green-500 to-green-600',
+      gradient: 'from-green-400/20 to-green-600/20',
+      features: ['Bulk Delivery', 'Quality Check', 'Fast Response']
     },
     { 
       id: 'ev',
@@ -80,7 +102,9 @@ export default function ServiceSelection() {
       description: 'Mobile electric vehicle charging',
       minStock: 1,
       unit: 'stations',
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-purple-600',
+      gradient: 'from-purple-400/20 to-purple-600/20',
+      features: ['Fast Charging', 'Multiple Ports', 'Smart Monitoring']
     },
     { 
       id: 'air',
@@ -89,7 +113,9 @@ export default function ServiceSelection() {
       description: 'Tire inflation service',
       minStock: 1,
       unit: 'pumps',
-      color: 'from-orange-500 to-orange-600'
+      color: 'from-orange-500 to-orange-600',
+      gradient: 'from-orange-400/20 to-orange-600/20',
+      features: ['Precision Filling', 'Leak Detection', '24/7 Service']
     },
     { 
       id: 'mechanical',
@@ -98,7 +124,9 @@ export default function ServiceSelection() {
       description: 'On-site vehicle repair and maintenance',
       minStock: 1,
       unit: 'mechanics',
-      color: 'from-red-500 to-red-600'
+      color: 'from-red-500 to-red-600',
+      gradient: 'from-red-400/20 to-red-600/20',
+      features: ['Expert Mechanics', 'Quick Response', 'Quality Parts']
     }
   ];
 
@@ -123,10 +151,10 @@ export default function ServiceSelection() {
           className="text-center mb-16"
         >
           <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-4">
-            Select Your Service
+            Roadside Assistance Services
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-            Real-time availability shown below. Services are only available when sufficient stock is present.
+            Choose from our range of professional roadside assistance services
           </p>
           <div className="mt-4 text-sm text-gray-500 flex items-center justify-center space-x-2">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
@@ -134,11 +162,12 @@ export default function ServiceSelection() {
           </div>
         </motion.header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {services.map((service, index) => {
             const currentStock = stock[service.id] || 0;
             const isAvailable = currentStock >= service.minStock;
             const stockPercentage = Math.min(Math.round((currentStock / (service.minStock * 2)) * 100), 100);
+            const isHovered = hoveredService === service.id;
 
             return (
               <motion.div 
@@ -146,30 +175,42 @@ export default function ServiceSelection() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                onHoverStart={() => setHoveredService(service.id)}
+                onHoverEnd={() => setHoveredService(null)}
                 onClick={() => handleServiceSelect(service.id)}
-                className={`relative rounded-2xl p-6 shadow-lg transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
+                className={`relative rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
                   ${isAvailable 
-                    ? 'bg-white hover:shadow-xl border-2 border-transparent hover:border-blue-500' 
+                    ? `bg-gradient-to-br ${service.gradient} hover:shadow-2xl border-2 border-transparent hover:border-${service.color.split('-')[1]}-500` 
                     : 'bg-gray-100 opacity-75'} backdrop-blur-sm backdrop-filter`
                 }
               >
                 <div className="flex items-start space-x-4">
-                  <div className={`p-4 rounded-xl bg-gradient-to-br ${service.color} text-white text-3xl shadow-lg transform hover:scale-110 transition-transform duration-300`}>
+                  <motion.div 
+                    animate={{ 
+                      scale: isHovered ? 1.1 : 1,
+                      rotate: isHovered ? 5 : 0
+                    }}
+                    className={`p-4 rounded-xl bg-gradient-to-br ${service.color} text-white text-3xl shadow-lg`}
+                  >
                     {service.icon}
-                  </div>
+                  </motion.div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <motion.span 
+                        animate={{ 
+                          scale: isHovered ? 1.1 : 1,
+                          backgroundColor: isAvailable ? '#10B981' : '#EF4444'
+                        }}
+                        className="px-3 py-1 rounded-full text-xs font-medium text-white"
+                      >
                         {isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
+                      </motion.span>
                     </div>
                     <p className="text-gray-600 mt-1 text-sm">{service.description}</p>
                     
-                    <div className="mt-4">
-                      <div className="flex justify-between text-xs text-gray-700 mb-1">
+                    <div className="mt-4 space-y-3">
+                      <div className="flex justify-between text-xs text-gray-700">
                         <span className="font-medium">Current stock:</span>
                         <span className="font-medium">{currentStock} {service.unit}</span>
                       </div>
@@ -185,6 +226,32 @@ export default function ServiceSelection() {
                         ></motion.div>
                       </div>
                     </div>
+
+                    <AnimatePresence>
+                      {isHovered && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-4 space-y-2"
+                        >
+                          {service.features.map((feature, idx) => (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.1 }}
+                              className="flex items-center text-sm text-gray-600"
+                            >
+                              <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              {feature}
+                            </motion.div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
@@ -208,10 +275,22 @@ export default function ServiceSelection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mt-12 text-center text-gray-500 text-sm bg-white/50 backdrop-blur-sm p-4 rounded-xl max-w-3xl mx-auto shadow-sm"
+          // className="mt-12 text-center text-gray-500 text-sm bg-white/50 backdrop-blur-sm p-6 rounded-xl max-w-3xl mx-auto shadow-sm"
         >
-          <p className="font-medium">Stock levels update in real-time. Minimum stock requirements:</p>
-          <p className="mt-1 text-xs">Petrol/Diesel: 100+ liters | EV: 1+ station | Air: 1+ pump | Mechanical: 1+ mechanic</p>
+          {/* <div className="flex items-center justify-center space-x-4">
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+              <span>Available</span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+              <span>Unavailable</span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+              <span>Low Stock</span>
+            </div>
+          </div> */}
         </motion.div>
       </div>
     </div>
