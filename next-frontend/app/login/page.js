@@ -34,7 +34,10 @@ export default function Login() {
       });
 
       if (response.ok) {
-        router.push('/dashboard'); // Redirect to dashboard after successful login
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('isLoggedIn', 'true');
+        }
+        router.push('/'); // Redirect to home page after successful login
       } else {
         const data = await response.json();
         setError(data.message || 'Login failed');

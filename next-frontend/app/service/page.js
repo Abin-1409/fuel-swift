@@ -13,6 +13,7 @@ export default function ServiceSelection() {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [selectedService, setSelectedService] = useState(null);
   const [hoveredService, setHoveredService] = useState(null);
+  const [error, setError] = useState('');
 
   // Mock stock data - replace with actual API call
   useEffect(() => {
@@ -36,39 +37,47 @@ export default function ServiceSelection() {
   }, []);
 
   const handleServiceSelect = (service) => {
-    const isAvailable = {
-      petrol: stock.petrol > 100,
-      diesel: stock.diesel > 100,
-      ev: stock.ev > 0,
-      air: stock.air > 0,
-      mechanical: stock.mechanical > 0
-    };
+    if (typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true') {
+      const isAvailable = {
+        petrol: stock.petrol > 100,
+        diesel: stock.diesel > 100,
+        ev: stock.ev > 0,
+        air: stock.air > 0,
+        mechanical: stock.mechanical > 0
+      };
 
-    if (isAvailable[service]) {
-      setSelectedService(service);
-      setTimeout(() => {
-        switch (service) {
-          case 'petrol':
-            router.push('/petrol_service');
-            break;
-          case 'diesel':
-            router.push('/diesel_service');
-            break;
-          case 'ev':
-            router.push('/electric');
-            break;
-          case 'air':
-            router.push('/air');
-            break;
-          case 'mechanical':
-            router.push('/mechanical');
-            break;
-          default:
-            router.push('/request?service=' + service);
-        }
-      }, 500);
+      if (isAvailable[service]) {
+        setSelectedService(service);
+        setTimeout(() => {
+          switch (service) {
+            case 'petrol':
+              router.push('/petrol_service');
+              break;
+            case 'diesel':
+              router.push('/diesel_service');
+              break;
+            case 'ev':
+              router.push('/electric');
+              break;
+            case 'air':
+              router.push('/air');
+              break;
+            case 'mechanical':
+              router.push('/mechanical');
+              break;
+            default:
+              router.push('/request?service=' + service);
+          }
+        }, 500);
+      } else {
+        alert(`${service.charAt(0).toUpperCase() + service.slice(1)} service is currently unavailable`);
+      }
     } else {
-      alert(`${service.charAt(0).toUpperCase() + service.slice(1)} service is currently unavailable`);
+      setError('Please log in to access this service.');
+      setTimeout(() => {
+        setError('');
+        router.push('/login');
+      }, 1500); // Show error for 1.5 seconds, then redirect
     }
   };
 
@@ -161,6 +170,12 @@ export default function ServiceSelection() {
             <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
           </div>
         </motion.header>
+
+        {error && (
+          <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
+            {error}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {services.map((service, index) => {

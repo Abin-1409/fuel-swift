@@ -4,13 +4,20 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const inter = Inter({ subsets: ['latin'] });
 
 function NavBar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
+    }
+  }, [pathname]);
 
   const isActive = (path) => {
     return pathname === path ? 'bg-blue-700' : 'hover:bg-blue-600';
@@ -18,6 +25,14 @@ function NavBar() {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('isLoggedIn');
+      setIsLoggedIn(false);
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -44,18 +59,30 @@ function NavBar() {
               >
                 Services
               </Link>
-              <Link 
-                href="/login" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/login')}`}
-              >
-                Login
-              </Link>
-              <Link 
-                href="/register" 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/register')}`}
-              >
-                Register
-              </Link>
+              {!isLoggedIn && (
+                <>
+                  <Link 
+                    href="/login" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/login')}`}
+                  >
+                    Login
+                  </Link>
+                  <Link 
+                    href="/register" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/register')}`}
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
+              {isLoggedIn && (
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition-colors"
+                >
+                  Logout
+                </button>
+              )}
             </div>
           </div>
 
@@ -109,20 +136,32 @@ function NavBar() {
           >
             Petrol Service
           </Link>
-          <Link 
-            href="/login" 
-            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/login')}`}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Login
-          </Link>
-          <Link 
-            href="/register" 
-            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/register')}`}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Register
-          </Link>
+          {!isLoggedIn && (
+            <>
+              <Link 
+                href="/login" 
+                className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/login')}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Login
+              </Link>
+              <Link 
+                href="/register" 
+                className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/register')}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Register
+              </Link>
+            </>
+          )}
+          {isLoggedIn && (
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+              className="block w-full text-left px-3 py-2 rounded-md text-base font-medium bg-red-500 hover:bg-red-600 transition-colors"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
     </nav>
