@@ -8,17 +8,22 @@ export default function DieselService() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [location, setLocation] = useState(null);
+  const [serviceData, setServiceData] = useState(null);
   const [formData, setFormData] = useState({
     vehicleType: '',
     vehicleNumber: '',
-    quantity: '',
+    quantityLiters: '',
+    amountRupees: '',
     deliveryTime: '',
     notes: ''
   });
   const [error, setError] = useState('');
-  const [stock, setStock] = useState(null);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [lastModifiedField, setLastModifiedField] = useState(null); // Track which field was last modified
 
-  // Get current location and check diesel stock
+  const API_BASE_URL = 'http://localhost:8000';
+
+  // Get current location and service data
   useEffect(() => {
     const getLocation = async () => {
       try {
@@ -30,14 +35,16 @@ export default function DieselService() {
                 lng: position.coords.longitude
               });
               
-              // Check diesel stock
+              // Fetch diesel service data
               try {
-                const response = await fetch('/api/services/diesel/stock');
-                const data = await response.json();
-                setStock(data.stock);
+                const response = await fetch(`${API_BASE_URL}/api/services/type/diesel/`);
+                if (response.ok) {
+                  const data = await response.json();
+                  setServiceData(data);
+                }
               } catch (err) {
-                console.error('Error checking stock:', err);
-                setError('Unable to check diesel stock');
+                console.error('Error fetching service data:', err);
+                setError('Unable to fetch service information');
               }
               
               setLoading(false);
@@ -61,8 +68,26 @@ export default function DieselService() {
     getLocation();
   }, []);
 
+  // Calculate total amount when quantity or amount changes
+  useEffect(() => {
+    if (serviceData && serviceData.price) {
+      if (lastModifiedField === 'quantityLiters' && formData.quantityLiters) {
+        const liters = parseFloat(formData.quantityLiters) || 0;
+        const amount = liters * serviceData.price;
+        setTotalAmount(amount);
+        setFormData(prev => ({ ...prev, amountRupees: amount.toFixed(2) }));
+      } else if (lastModifiedField === 'amountRupees' && formData.amountRupees) {
+        const amount = parseFloat(formData.amountRupees) || 0;
+        const liters = amount / serviceData.price;
+        setTotalAmount(amount);
+        setFormData(prev => ({ ...prev, quantityLiters: liters.toFixed(2) }));
+      }
+    }
+  }, [formData.quantityLiters, formData.amountRupees, serviceData, lastModifiedField]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setLastModifiedField(name); // Track which field is being modified
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -78,30 +103,48 @@ export default function DieselService() {
       return;
     }
 
-    if (!formData.vehicleType || !formData.vehicleNumber || !formData.quantity || !formData.deliveryTime) {
+    if (!formData.vehicleType || !formData.vehicleNumber || (!formData.quantityLiters && !formData.amountRupees) || !formData.deliveryTime) {
       setError('Please fill in all required fields');
       return;
     }
 
-    if (stock && parseInt(formData.quantity) > stock) {
-      setError(`Only ${stock} liters of diesel available`);
+    if (!serviceData) {
+      setError('Service information not available');
+      return;
+    }
+
+    // Get user email from localStorage
+    const userEmail = localStorage.getItem('userEmail');
+    if (!userEmail) {
+      setError('Please log in to continue');
+      router.push('/login');
       return;
     }
 
     try {
-      const response = await fetch('/api/services/diesel', {
+      const requestData = {
+        service_type: 'diesel',
+        user_email: userEmail,
+        vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
+        quantity_liters: formData.quantityLiters || null,
+        amount_rupees: formData.amountRupees || null,
+        delivery_time: formData.deliveryTime,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        notes: formData.notes
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          location,
-          fuelType: 'Diesel'
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (response.ok) {
+        const result = await response.json();
         router.push('/confirmation');
       } else {
         const data = await response.json();
@@ -135,17 +178,19 @@ export default function DieselService() {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Diesel Delivery Request</h1>
             <p className="text-gray-600">Emergency diesel delivery to your location</p>
+            {serviceData && (
+              <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-800">
+                  Current Price: ₹{serviceData.price} per liter
+                  {serviceData.stock > 0 && ` | Available: ${serviceData.stock} liters`}
+                </p>
+              </div>
+            )}
           </div>
 
           {error && (
             <div className="mb-6 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
               <span className="block sm:inline">{error}</span>
-            </div>
-          )}
-
-          {stock !== null && (
-            <div className="mb-6 bg-blue-50 border border-blue-400 text-blue-700 px-4 py-3 rounded relative">
-              <span className="block sm:inline">Current diesel stock: {stock} liters</span>
             </div>
           )}
 
@@ -207,27 +252,95 @@ export default function DieselService() {
               />
             </div>
 
-            {/* Quantity */}
-            <div>
-              <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
-                Required Quantity (liters) *
-              </label>
-              <input
-                type="number"
-                id="quantity"
-                name="quantity"
-                value={formData.quantity}
-                onChange={handleChange}
-                required
-                min="1"
-                max={stock || 100}
-                placeholder="Enter quantity in liters"
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                {stock ? `Maximum ${stock} liters available` : 'Please wait for stock information'}
-              </p>
+            {/* Quantity and Amount Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Quantity in Liters */}
+              <div>
+                <label htmlFor="quantityLiters" className="block text-sm font-medium text-gray-700">
+                  Quantity (Liters) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    id="quantityLiters"
+                    name="quantityLiters"
+                    value={formData.quantityLiters}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0.1"
+                    max={serviceData?.stock || 100}
+                    placeholder="Enter liters"
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-12"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-gray-500 text-sm">L</span>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {serviceData?.stock ? `Max: ${serviceData.stock} liters` : 'Enter quantity in liters'}
+                </p>
+                {lastModifiedField === 'quantityLiters' && formData.quantityLiters && (
+                  <p className="mt-1 text-xs text-blue-600">
+                    Auto-calculating amount...
+                  </p>
+                )}
+              </div>
+
+              {/* Amount in Rupees */}
+              <div>
+                <label htmlFor="amountRupees" className="block text-sm font-medium text-gray-700">
+                  Amount (₹) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    id="amountRupees"
+                    name="amountRupees"
+                    value={formData.amountRupees}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0.01"
+                    placeholder="Enter amount"
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm pr-12"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <span className="text-gray-500 text-sm">₹</span>
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Enter amount in rupees</p>
+                {lastModifiedField === 'amountRupees' && formData.amountRupees && (
+                  <p className="mt-1 text-xs text-blue-600">
+                    Auto-calculating liters...
+                  </p>
+                )}
+              </div>
             </div>
+
+            {/* Calculation Info */}
+            {serviceData && (formData.quantityLiters || formData.amountRupees) && (
+              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                <p className="text-xs text-green-800">
+                  <strong>Calculation:</strong> ₹{serviceData.price} per liter
+                  {formData.quantityLiters && formData.amountRupees && (
+                    <span> • {formData.quantityLiters}L × ₹{serviceData.price} = ₹{totalAmount.toFixed(2)}</span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Total Amount Display */}
+            {totalAmount > 0 && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-blue-800">Total Amount:</span>
+                  <span className="text-lg font-bold text-blue-900">₹{totalAmount.toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  {formData.quantityLiters && `${formData.quantityLiters} liters`}
+                  {formData.amountRupees && !formData.quantityLiters && `${(parseFloat(formData.amountRupees) / serviceData?.price).toFixed(2)} liters`}
+                </p>
+              </div>
+            )}
 
             {/* Delivery Time */}
             <div>
@@ -264,7 +377,8 @@ export default function DieselService() {
             <div className="pt-4">
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={!formData.quantityLiters && !formData.amountRupees}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Request Diesel Delivery
               </button>
@@ -275,3 +389,4 @@ export default function DieselService() {
     </div>
   );
 }
+

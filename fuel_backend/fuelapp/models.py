@@ -41,3 +41,65 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+class Service(models.Model):
+    SERVICE_TYPES = [
+        ('petrol', 'Petrol'),
+        ('diesel', 'Diesel'),
+        ('ev', 'EV Charging'),
+        ('air', 'Air Filling'),
+        ('mechanical', 'Mechanical Work'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('maintenance', 'Maintenance'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=20, choices=SERVICE_TYPES)
+    description = models.TextField()
+    stock = models.IntegerField(default=0)
+    unit = models.CharField(max_length=20)  # liters, stations, pumps, mechanics
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='INR')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.get_type_display()}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+class ServiceRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='service_requests')
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='requests')
+    vehicle_type = models.CharField(max_length=50)
+    vehicle_number = models.CharField(max_length=20)
+    quantity_liters = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    amount_rupees = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    delivery_time = models.DateTimeField()
+    location_lat = models.DecimalField(max_digits=10, decimal_places=6)
+    location_lng = models.DecimalField(max_digits=10, decimal_places=6)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.first_name} - {self.service.name} - {self.status}"
+
+    class Meta:
+        ordering = ['-created_at']

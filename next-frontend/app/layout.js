@@ -12,10 +12,12 @@ function NavBar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [firstName, setFirstName] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
+      setFirstName(localStorage.getItem('firstName') || '');
     }
   }, [pathname]);
 
@@ -30,6 +32,7 @@ function NavBar() {
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('firstName');
       setIsLoggedIn(false);
       window.location.href = '/';
     }
@@ -59,6 +62,11 @@ function NavBar() {
               >
                 Services
               </Link>
+              {isLoggedIn && firstName && (
+                <span className="px-3 py-2 rounded-md text-sm font-semibold bg-gradient-to-r from-blue-400 to-purple-400 text-white shadow-md animate-fade-in">
+                  Hi, {firstName}!
+                </span>
+              )}
               {!isLoggedIn && (
                 <>
                   <Link 

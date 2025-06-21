@@ -34,8 +34,12 @@ export default function Login() {
       });
 
       if (response.ok) {
+        const data = await response.json();
         if (typeof window !== 'undefined') {
           localStorage.setItem('isLoggedIn', 'true');
+          if (data.first_name) {
+            localStorage.setItem('firstName', data.first_name);
+          }
         }
         router.push('/'); // Redirect to home page after successful login
       } else {

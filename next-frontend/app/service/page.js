@@ -8,70 +8,69 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ServiceSelection() {
   const router = useRouter();
-  const [stock, setStock] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
   const [selectedService, setSelectedService] = useState(null);
   const [hoveredService, setHoveredService] = useState(null);
   const [error, setError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock stock data - replace with actual API call
+  const API_BASE_URL = 'http://localhost:8000';
+
   useEffect(() => {
-    const fetchStock = async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setStock({
-        petrol: 850,
-        diesel: 620,
-        ev: 4,
-        air: 2,
-        mechanical: 3
-      });
-      setLastUpdated(new Date());
-      setLoading(false);
-    };
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
+    }
+  }, []);
 
-    fetchStock();
-    const interval = setInterval(fetchStock, 30000);
-    return () => clearInterval(interval);
+  // Fetch services from backend
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/services/`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch services');
+      }
+      const data = await response.json();
+      // Filter only active services
+      const activeServices = data.filter(service => service.status === 'active');
+      setServices(activeServices);
+    } catch (err) {
+      setError('Failed to load services. Please try again later.');
+      console.error('Error fetching services:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchServices();
   }, []);
 
   const handleServiceSelect = (service) => {
     if (typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true') {
-      const isAvailable = {
-        petrol: stock.petrol > 100,
-        diesel: stock.diesel > 100,
-        ev: stock.ev > 0,
-        air: stock.air > 0,
-        mechanical: stock.mechanical > 0
-      };
-
-      if (isAvailable[service]) {
-        setSelectedService(service);
-        setTimeout(() => {
-          switch (service) {
-            case 'petrol':
-              router.push('/petrol_service');
-              break;
-            case 'diesel':
-              router.push('/diesel_service');
-              break;
-            case 'ev':
-              router.push('/electric');
-              break;
-            case 'air':
-              router.push('/air');
-              break;
-            case 'mechanical':
-              router.push('/mechanical');
-              break;
-            default:
-              router.push('/request?service=' + service);
-          }
-        }, 500);
-      } else {
-        alert(`${service.charAt(0).toUpperCase() + service.slice(1)} service is currently unavailable`);
-      }
+      setSelectedService(service);
+      setTimeout(() => {
+        switch (service.type) {
+          case 'petrol':
+            router.push('/petrol_service');
+            break;
+          case 'diesel':
+            router.push('/diesel_service');
+            break;
+          case 'ev':
+            router.push('/electric');
+            break;
+          case 'air':
+            router.push('/air');
+            break;
+          case 'mechanical':
+            router.push('/mechanical');
+            break;
+          default:
+            router.push('/request?service=' + service.type);
+        }
+      }, 500);
     } else {
       setError('Please log in to access this service.');
       setTimeout(() => {
@@ -81,71 +80,54 @@ export default function ServiceSelection() {
     }
   };
 
-  const services = [
-    { 
-      id: 'petrol',
-      name: 'Petrol',
-      icon: '⛽',
-      description: 'Fuel delivery for petrol vehicles',
-      minStock: 100,
-      unit: 'liters',
-      color: 'from-blue-500 to-blue-600',
-      gradient: 'from-blue-400/20 to-blue-600/20',
-      features: ['24/7 Delivery', 'Quality Assured', 'Quick Service']
-    },
-    { 
-      id: 'diesel',
-      name: 'Diesel',
-      icon: '⛽',
-      description: 'Fuel delivery for diesel vehicles',
-      minStock: 100,
-      unit: 'liters',
-      color: 'from-green-500 to-green-600',
-      gradient: 'from-green-400/20 to-green-600/20',
-      features: ['Bulk Delivery', 'Quality Check', 'Fast Response']
-    },
-    { 
-      id: 'ev',
-      name: 'EV Charging',
-      icon: '🔌',
-      description: 'Mobile electric vehicle charging',
-      minStock: 1,
-      unit: 'stations',
-      color: 'from-purple-500 to-purple-600',
-      gradient: 'from-purple-400/20 to-purple-600/20',
-      features: ['Fast Charging', 'Multiple Ports', 'Smart Monitoring']
-    },
-    { 
-      id: 'air',
-      name: 'Air Filling',
-      icon: '💨',
-      description: 'Tire inflation service',
-      minStock: 1,
-      unit: 'pumps',
-      color: 'from-orange-500 to-orange-600',
-      gradient: 'from-orange-400/20 to-orange-600/20',
-      features: ['Precision Filling', 'Leak Detection', '24/7 Service']
-    },
-    { 
-      id: 'mechanical',
-      name: 'Mechanical Work',
-      icon: '🔧',
-      description: 'On-site vehicle repair and maintenance',
-      minStock: 1,
-      unit: 'mechanics',
-      color: 'from-red-500 to-red-600',
-      gradient: 'from-red-400/20 to-red-600/20',
-      features: ['Expert Mechanics', 'Quick Response', 'Quality Parts']
-    }
-  ];
+  // Get service styling based on type
+  const getServiceStyling = (type) => {
+    const styling = {
+      petrol: {
+        icon: '⛽',
+        color: 'from-blue-500 to-blue-600',
+        gradient: 'from-blue-400/20 to-blue-600/20',
+        features: ['24/7 Delivery', 'Quality Assured', 'Quick Service']
+      },
+      diesel: {
+        icon: '⛽',
+        color: 'from-green-500 to-green-600',
+        gradient: 'from-green-400/20 to-green-600/20',
+        features: ['Bulk Delivery', 'Quality Check', 'Fast Response']
+      },
+      ev: {
+        icon: '🔌',
+        color: 'from-purple-500 to-purple-600',
+        gradient: 'from-purple-400/20 to-purple-600/20',
+        features: ['Fast Charging', 'Multiple Ports', 'Smart Monitoring']
+      },
+      air: {
+        icon: '💨',
+        color: 'from-orange-500 to-orange-600',
+        gradient: 'from-orange-400/20 to-orange-600/20',
+        features: ['Precision Filling', 'Leak Detection', '24/7 Service']
+      },
+      mechanical: {
+        icon: '🔧',
+        color: 'from-red-500 to-red-600',
+        gradient: 'from-red-400/20 to-red-600/20',
+        features: ['Expert Mechanics', 'Quick Response', 'Quality Parts']
+      }
+    };
+    return styling[type] || {
+      icon: '⚙️',
+      color: 'from-gray-500 to-gray-600',
+      gradient: 'from-gray-400/20 to-gray-600/20',
+      features: ['Professional Service', 'Quality Assured']
+    };
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-6 text-gray-600 text-lg font-medium">Checking service availability...</p>
-          <p className="mt-2 text-gray-500 text-sm">This may take a moment</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading services...</p>
         </div>
       </div>
     );
@@ -165,25 +147,25 @@ export default function ServiceSelection() {
           <p className="text-gray-600 max-w-2xl mx-auto text-lg">
             Choose from our range of professional roadside assistance services
           </p>
-          <div className="mt-4 text-sm text-gray-500 flex items-center justify-center space-x-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
-          </div>
         </motion.header>
 
         {error && (
-          <div className="bg-red-100 text-red-700 p-2 rounded mb-4 text-center">
+          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center max-w-2xl mx-auto">
             {error}
+          </div>
+        )}
+
+        {services.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg">No services available at the moment. Please check back later.</p>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {services.map((service, index) => {
-            const currentStock = stock[service.id] || 0;
-            const isAvailable = currentStock >= service.minStock;
-            const stockPercentage = Math.min(Math.round((currentStock / (service.minStock * 2)) * 100), 100);
             const isHovered = hoveredService === service.id;
-
+            const styling = getServiceStyling(service.type);
+            
             return (
               <motion.div 
                 key={service.id}
@@ -192,11 +174,9 @@ export default function ServiceSelection() {
                 transition={{ delay: index * 0.1 }}
                 onHoverStart={() => setHoveredService(service.id)}
                 onHoverEnd={() => setHoveredService(null)}
-                onClick={() => handleServiceSelect(service.id)}
+                onClick={() => handleServiceSelect(service)}
                 className={`relative rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
-                  ${isAvailable 
-                    ? `bg-gradient-to-br ${service.gradient} hover:shadow-2xl border-2 border-transparent hover:border-${service.color.split('-')[1]}-500` 
-                    : 'bg-gray-100 opacity-75'} backdrop-blur-sm backdrop-filter`
+                  bg-gradient-to-br ${styling.gradient} hover:shadow-2xl border-2 border-transparent hover:border-${styling.color.split('-')[1]}-500 backdrop-blur-sm backdrop-filter`
                 }
               >
                 <div className="flex items-start space-x-4">
@@ -205,42 +185,33 @@ export default function ServiceSelection() {
                       scale: isHovered ? 1.1 : 1,
                       rotate: isHovered ? 5 : 0
                     }}
-                    className={`p-4 rounded-xl bg-gradient-to-br ${service.color} text-white text-3xl shadow-lg`}
+                    className={`p-4 rounded-xl bg-gradient-to-br ${styling.color} text-white text-3xl shadow-lg`}
                   >
-                    {service.icon}
+                    {styling.icon}
                   </motion.div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                      <motion.span 
-                        animate={{ 
-                          scale: isHovered ? 1.1 : 1,
-                          backgroundColor: isAvailable ? '#10B981' : '#EF4444'
-                        }}
-                        className="px-3 py-1 rounded-full text-xs font-medium text-white"
-                      >
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                      </motion.span>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-900">₹{service.price}</p>
+                        <p className="text-sm text-gray-600">
+                          {service.type === 'petrol' || service.type === 'diesel' ? 'per liter' :
+                           service.type === 'ev' ? 'per session' :
+                           service.type === 'air' ? 'per service' :
+                           service.type === 'mechanical' ? 'per hour' : 'per service'}
+                        </p>
+                      </div>
                     </div>
                     <p className="text-gray-600 mt-1 text-sm">{service.description}</p>
                     
-                    <div className="mt-4 space-y-3">
-                      <div className="flex justify-between text-xs text-gray-700">
-                        <span className="font-medium">Current stock:</span>
-                        <span className="font-medium">{currentStock} {service.unit}</span>
+                    {/* Show stock for fuel services */}
+                    {(service.type === 'petrol' || service.type === 'diesel') && service.stock > 0 && (
+                      <div className="mt-2">
+                        <p className="text-sm text-green-600 font-medium">
+                          Available: {service.stock} {service.unit}
+                        </p>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${stockPercentage}%` }}
-                          transition={{ duration: 0.5 }}
-                          className={`h-2 rounded-full ${
-                            stockPercentage > 70 ? 'bg-green-500' : 
-                            stockPercentage > 30 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                        ></motion.div>
-                      </div>
-                    </div>
+                    )}
 
                     <AnimatePresence>
                       {isHovered && (
@@ -250,7 +221,7 @@ export default function ServiceSelection() {
                           exit={{ opacity: 0, height: 0 }}
                           className="mt-4 space-y-2"
                         >
-                          {service.features.map((feature, idx) => (
+                          {styling.features.map((feature, idx) => (
                             <motion.div
                               key={idx}
                               initial={{ opacity: 0, x: -20 }}
@@ -269,44 +240,10 @@ export default function ServiceSelection() {
                     </AnimatePresence>
                   </div>
                 </div>
-
-                {!isAvailable && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-2xl backdrop-blur-sm"
-                  >
-                    <span className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium text-sm">
-                      Check back later
-                    </span>
-                  </motion.div>
-                )}
               </motion.div>
             );
           })}
         </div>
-
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          // className="mt-12 text-center text-gray-500 text-sm bg-white/50 backdrop-blur-sm p-6 rounded-xl max-w-3xl mx-auto shadow-sm"
-        >
-          {/* <div className="flex items-center justify-center space-x-4">
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-              <span>Unavailable</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-              <span>Low Stock</span>
-            </div>
-          </div> */}
-        </motion.div>
       </div>
     </div>
   );
