@@ -64,7 +64,7 @@ function NavBar() {
               </Link>
               {isLoggedIn && firstName && (
                 <span className="px-3 py-2 rounded-md text-sm font-semibold bg-gradient-to-r from-blue-400 to-purple-400 text-white shadow-md animate-fade-in">
-                  Hi, {firstName}!
+                  Hi, {firstName}
                 </span>
               )}
               {!isLoggedIn && (

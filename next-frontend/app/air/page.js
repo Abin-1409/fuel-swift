@@ -179,6 +179,7 @@ export default function AirService() {
                 <option value="">Select vehicle type</option>
                 <option value="car">Car</option>
                 <option value="bike">Bike</option>
+                <option value="bus">Bus</option>
                 <option value="truck">Truck</option>
               </select>
             </div>
@@ -201,8 +202,8 @@ export default function AirService() {
                 <option value="2">2 Tyres</option>
                 <option value="3">3 Tyres</option>
                 <option value="4">4 Tyres</option>
-                <option value="6">6 Tyres (Truck)</option>
-                <option value="8">8 Tyres (Truck)</option>
+                <option value="6">6 Tyres</option>
+                <option value="8">8 Tyres</option>
               </select>
             </div>
 

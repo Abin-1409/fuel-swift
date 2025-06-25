@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from .models import CustomUser, Service, ServiceRequest
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
@@ -20,6 +20,11 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceRequest
         fields = '__all__'
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number', 'address', 'photo', 'is_active', 'is_staff']
 
 @csrf_exempt
 @api_view(['POST'])
@@ -54,13 +59,13 @@ def login_view(request):
     password = data.get('password')
     if not email or not password:
         return Response({'message': 'Email and password required'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        user_obj = CustomUser.objects.get(email=email)
-        user = authenticate(phone_number=user_obj.phone_number, password=password)
-    except CustomUser.DoesNotExist:
-        user = None
+    user = authenticate(request, email=email, password=password)
     if user is not None:
-        return Response({'message': 'Login successful', 'first_name': user_obj.first_name}, status=status.HTTP_200_OK)
+        return Response({
+            'message': 'Login successful',
+            'first_name': user.first_name,
+            'is_staff': user.is_staff
+        }, status=status.HTTP_200_OK)
     else:
         return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -193,3 +198,25 @@ def get_service_by_type(request, service_type):
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Service.DoesNotExist:
         return Response({'message': 'Service not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])  # You may want to restrict this to admin users only
+def user_list(request):
+    users = CustomUser.objects.all()
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@csrf_exempt
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def user_delete(request, user_id):
+    try:
+        user = get_object_or_404(CustomUser, id=user_id)
+        if user.is_staff:
+            return Response({'message': 'Cannot delete admin/staff users.'}, status=status.HTTP_403_FORBIDDEN)
+        user.delete()
+        return Response({'message': 'User deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return Response({'message': f'Error deleting user: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

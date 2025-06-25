@@ -12,7 +12,6 @@ export default function MechanicalWork() {
     vehicleType: '',
     vehicleNumber: '',
     issue: '',
-    emergencyLevel: '',
     notes: '',
     image: null
   });
@@ -150,7 +149,7 @@ export default function MechanicalWork() {
       return;
     }
 
-    if (!formData.vehicleType || !formData.vehicleNumber || !formData.issue || !formData.emergencyLevel) {
+    if (!formData.vehicleType || !formData.vehicleNumber || !formData.issue) {
       setError('Please fill in all required fields');
       return;
     }
@@ -254,10 +253,10 @@ export default function MechanicalWork() {
               >
                 <option value="">Select vehicle type</option>
                 <option value="car">Car</option>
-                <option value="bike">Bike</option>
+                <option value="bike">Bike/Scooter</option>
+                <option value="bus">Bus</option>
                 <option value="truck">Truck</option>
-                <option value="van">Van</option>
-                <option value="suv">SUV</option>
+                <option value="other">Other</option>
               </select>
             </div>
 
@@ -303,26 +302,6 @@ export default function MechanicalWork() {
                   {mechanicalIssues.find(i => i.value === formData.issue)?.description}
                 </p>
               )}
-            </div>
-
-            {/* Emergency Level */}
-            <div>
-              <label htmlFor="emergencyLevel" className="block text-sm font-medium text-gray-700">
-                Emergency Level *
-              </label>
-              <select
-                id="emergencyLevel"
-                name="emergencyLevel"
-                value={formData.emergencyLevel}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
-              >
-                <option value="">Select emergency level</option>
-                <option value="low">Low - Can wait for scheduled service</option>
-                <option value="moderate">Moderate - Needs attention soon</option>
-                <option value="high">High - Immediate assistance required</option>
-              </select>
             </div>
 
             {/* Image Upload */}

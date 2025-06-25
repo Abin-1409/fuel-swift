@@ -216,7 +216,7 @@ export default function DieselService() {
             {/* Vehicle Type */}
             <div>
               <label htmlFor="vehicleType" className="block text-sm font-medium text-gray-700">
-                Vehicle/Machinery Type *
+                Vehicle Type *
               </label>
               <select
                 id="vehicleType"
@@ -229,8 +229,7 @@ export default function DieselService() {
                 <option value="">Select vehicle type</option>
                 <option value="truck">Truck</option>
                 <option value="bus">Bus</option>
-                <option value="generator">Generator</option>
-                <option value="construction">Construction Equipment</option>
+                <option value="car">Car</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -238,7 +237,7 @@ export default function DieselService() {
             {/* Vehicle Number */}
             <div>
               <label htmlFor="vehicleNumber" className="block text-sm font-medium text-gray-700">
-                Vehicle/Machinery Number *
+                Vehicle Number *
               </label>
               <input
                 type="text"
@@ -247,7 +246,7 @@ export default function DieselService() {
                 value={formData.vehicleNumber}
                 onChange={handleChange}
                 required
-                placeholder="Enter registration or identification number"
+                placeholder="Enter vehicle registration number"
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
             </div>

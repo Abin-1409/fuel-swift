@@ -33,6 +33,10 @@ export default function AdminDashboard() {
     router.push('/service_management');
   };
 
+  const handleManageUsers = () => {
+    router.push('/user_list');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -195,7 +199,10 @@ export default function AdminDashboard() {
         >
           <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors border border-blue-500/30">
+            <button 
+              onClick={handleManageUsers}
+              className="p-4 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg transition-colors border border-blue-500/30 cursor-pointer"
+            >
               <div className="text-2xl mb-2">👥</div>
               <p className="text-sm font-medium">Manage Users</p>
             </button>

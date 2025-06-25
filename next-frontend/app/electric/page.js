@@ -9,9 +9,8 @@ export default function ElectricCharging() {
   const [loading, setLoading] = useState(true);
   const [location, setLocation] = useState(null);
   const [formData, setFormData] = useState({
-    vehicleMake: '',
-    vehicleModel: '',
-    batteryPercentage: '',
+    vehicleType: '',
+    vehicleNumber: '',
     chargerType: '',
     chargingRequirement: '',
     preferredTime: '',
@@ -80,8 +79,7 @@ export default function ElectricCharging() {
       return;
     }
 
-    if (!formData.vehicleMake || !formData.vehicleModel || !formData.batteryPercentage || 
-        !formData.chargerType || !formData.chargingRequirement || !formData.preferredTime) {
+    if (!formData.vehicleType || !formData.vehicleNumber || !formData.chargerType || !formData.chargingRequirement || !formData.preferredTime) {
       setError('Please fill in all required fields');
       return;
     }
@@ -166,62 +164,41 @@ export default function ElectricCharging() {
               </div>
             </div>
 
-            {/* Vehicle Make */}
+            {/* Vehicle Type */}
             <div>
-              <label htmlFor="vehicleMake" className="block text-sm font-medium text-gray-700">
-                Vehicle Make *
+              <label htmlFor="vehicleType" className="block text-sm font-medium text-gray-700">
+                Vehicle Type *
+              </label>
+              <select
+                id="vehicleType"
+                name="vehicleType"
+                value={formData.vehicleType}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+              >
+                <option value="">Select vehicle type</option>
+                <option value="ev_car">EV Car</option>
+                <option value="ev_bike">EV Bike/Scooter</option>
+                <option value="ev_auto">EV Auto Rickshaw</option>
+              </select>
+            </div>
+
+            {/* Vehicle Number */}
+            <div>
+              <label htmlFor="vehicleNumber" className="block text-sm font-medium text-gray-700">
+                Vehicle Number *
               </label>
               <input
                 type="text"
-                id="vehicleMake"
-                name="vehicleMake"
-                value={formData.vehicleMake}
+                id="vehicleNumber"
+                name="vehicleNumber"
+                value={formData.vehicleNumber}
                 onChange={handleChange}
                 required
-                placeholder="e.g., Tesla, Nissan, BMW"
+                placeholder="Enter vehicle registration number"
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
               />
-            </div>
-
-            {/* Vehicle Model */}
-            <div>
-              <label htmlFor="vehicleModel" className="block text-sm font-medium text-gray-700">
-                Vehicle Model *
-              </label>
-              <input
-                type="text"
-                id="vehicleModel"
-                name="vehicleModel"
-                value={formData.vehicleModel}
-                onChange={handleChange}
-                required
-                placeholder="e.g., Model 3, Leaf, i3"
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
-              />
-            </div>
-
-            {/* Battery Percentage */}
-            <div>
-              <label htmlFor="batteryPercentage" className="block text-sm font-medium text-gray-700">
-                Current Battery Percentage *
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <input
-                  type="number"
-                  id="batteryPercentage"
-                  name="batteryPercentage"
-                  value={formData.batteryPercentage}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  max="100"
-                  placeholder="Enter current battery percentage"
-                  className="block w-full border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">%</span>
-                </div>
-              </div>
             </div>
 
             {/* Charger Type */}
@@ -238,11 +215,11 @@ export default function ElectricCharging() {
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
               >
                 <option value="">Select charger type</option>
-                <option value="type1">Type 1 (SAE J1772)</option>
-                <option value="type2">Type 2 (Mennekes)</option>
-                <option value="ccs">CCS (Combined Charging System)</option>
+                <option value="basic">Basic (15A Socket)</option>
+                <option value="type2">Type 2 (AC Charging)</option>
+                <option value="ccs">CCS (DC Fast Charging)</option>
                 <option value="chademo">CHAdeMO</option>
-                <option value="tesla">Tesla Supercharger</option>
+                <option value="bharat_dc">Bharat DC-001</option>
               </select>
             </div>
 

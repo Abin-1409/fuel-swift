@@ -132,3 +132,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 AUTH_USER_MODEL = 'fuelapp.CustomUser'
+
+AUTHENTICATION_BACKENDS = [
+    'fuelapp.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]

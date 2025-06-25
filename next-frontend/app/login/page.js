@@ -40,6 +40,13 @@ export default function Login() {
           if (data.first_name) {
             localStorage.setItem('firstName', data.first_name);
           }
+          if (typeof data.is_staff !== 'undefined') {
+            localStorage.setItem('isStaff', data.is_staff);
+            if (data.is_staff) {
+              router.push('/admin_dashboard');
+              return;
+            }
+          }
         }
         router.push('/'); // Redirect to home page after successful login
       } else {
