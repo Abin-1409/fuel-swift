@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from .models import CustomUser, Service, ServiceRequest
+from .models import CustomUser, Service, ServiceRequest, AgentRegistrationRequest
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -8,6 +8,7 @@ from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers
 from decimal import Decimal
+from rest_framework.parsers import MultiPartParser, FormParser
 
 # Create your views here.
 
@@ -24,7 +25,12 @@ class ServiceRequestSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number', 'address', 'photo', 'is_active', 'is_staff']
+        fields = ['id', 'first_name', 'last_name', 'email', 'phone_number', 'address', 'photo', 'is_active', 'is_staff', 'user_type']
+
+class AgentRegistrationRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AgentRegistrationRequest
+        fields = '__all__'
 
 @csrf_exempt
 @api_view(['POST'])
@@ -46,7 +52,8 @@ def register(request):
         first_name=data['first_name'],
         last_name=data['last_name'],
         address=data.get('address', ''),
-        photo=request.FILES.get('photo').name if 'photo' in request.FILES else ''
+        photo=request.FILES.get('photo').name if 'photo' in request.FILES else '',
+        user_type='user'
     )
     return Response({'message': 'Registration successful'}, status=status.HTTP_201_CREATED)
 
@@ -64,7 +71,8 @@ def login_view(request):
         return Response({
             'message': 'Login successful',
             'first_name': user.first_name,
-            'is_staff': user.is_staff
+            'is_staff': user.is_staff,
+            'user_type': user.user_type
         }, status=status.HTTP_200_OK)
     else:
         return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -264,3 +272,67 @@ def mechanical_service_prices(request):
         })
     except Service.DoesNotExist:
         return Response({'error': 'Mechanical service not found'}, status=404)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def agent_registration_request(request):
+    parser_classes = (MultiPartParser, FormParser)
+    serializer = AgentRegistrationRequestSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Agent registration request submitted, pending admin approval.'}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])  # You may want to restrict to admin only
+def agent_registration_requests(request):
+    requests = AgentRegistrationRequest.objects.all().order_by('-created_at')
+    serializer = AgentRegistrationRequestSerializer(requests, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])  # You may want to restrict to admin only
+def accept_agent_registration_request(request, req_id):
+    try:
+        reg_req = AgentRegistrationRequest.objects.get(id=req_id)
+        # Create CustomUser
+        if CustomUser.objects.filter(phone_number=reg_req.phone_number).exists():
+            return Response({'message': 'User with this phone number already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        if CustomUser.objects.filter(email=reg_req.email).exists():
+            return Response({'message': 'User with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        # Split full name
+        name_parts = reg_req.full_name.strip().split()
+        first_name = name_parts[0]
+        last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+        user = CustomUser.objects.create_user(
+            phone_number=reg_req.phone_number,
+            email=reg_req.email,
+            password=reg_req.password,
+            first_name=first_name,
+            last_name=last_name,
+            address='',
+            photo=reg_req.id_proof_file.name,
+            user_type='agent'
+        )
+        reg_req.delete()
+        return Response({'message': 'Agent registration accepted and user created.'}, status=status.HTTP_201_CREATED)
+    except AgentRegistrationRequest.DoesNotExist:
+        return Response({'message': 'Registration request not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def agent_registration_status(request):
+    email = request.GET.get('email')
+    if not email:
+        return Response({'message': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    # Check if agent is approved
+    if CustomUser.objects.filter(email=email, user_type='agent').exists():
+        return Response({'status': 'approved'}, status=status.HTTP_200_OK)
+    # Check if request is pending
+    if AgentRegistrationRequest.objects.filter(email=email).exists():
+        return Response({'status': 'pending'}, status=status.HTTP_200_OK)
+    return Response({'message': 'No registration found for this email.'}, status=status.HTTP_404_NOT_FOUND)

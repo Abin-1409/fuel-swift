@@ -33,6 +33,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     photo = models.CharField(max_length=255, blank=True, null=True)  # Store image URL or path
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    USER_TYPE_CHOICES = [
+        ('user', 'User'),
+        ('agent', 'Agent'),
+    ]
+    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='user')
 
     objects = CustomUserManager()
 
@@ -122,3 +127,16 @@ class ServiceRequest(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+class AgentRegistrationRequest(models.Model):
+    full_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=15)
+    email = models.EmailField()
+    password = models.CharField(max_length=128)  # Store raw or hashed, to be handled on approval
+    id_proof_type = models.CharField(max_length=50)
+    id_proof_number = models.CharField(max_length=50)
+    id_proof_file = models.FileField(upload_to='agent_id_proofs/')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.full_name} ({self.email}) - Pending Agent Registration"

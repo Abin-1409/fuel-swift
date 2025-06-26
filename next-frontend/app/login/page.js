@@ -42,13 +42,21 @@ export default function Login() {
           }
           if (typeof data.is_staff !== 'undefined') {
             localStorage.setItem('isStaff', data.is_staff);
-            if (data.is_staff) {
-              router.push('/admin_dashboard');
-              return;
-            }
+          }
+          if (data.user_type) {
+            localStorage.setItem('userType', data.user_type);
+          }
+          if (data.is_staff) {
+            router.push('/admin_dashboard');
+            return;
+          } else if (data.user_type === 'agent') {
+            router.push('/agent_dashboard');
+            return;
+          } else {
+            router.push('/');
+            return;
           }
         }
-        router.push('/'); // Redirect to home page after successful login
       } else {
         const data = await response.json();
         setError(data.message || 'Login failed');

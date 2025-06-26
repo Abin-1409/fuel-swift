@@ -29,6 +29,51 @@ export default function AdminDashboard() {
     { name: 'Mechanical', requests: 15, revenue: 4200, color: 'from-red-500 to-red-600' }
   ]);
 
+  const [agentRequests, setAgentRequests] = useState([]);
+  const [agentReqLoading, setAgentReqLoading] = useState(false);
+  const [agentReqError, setAgentReqError] = useState("");
+  const [agentReqSuccess, setAgentReqSuccess] = useState("");
+
+  useEffect(() => {
+    fetchAgentRequests();
+  }, []);
+
+  const fetchAgentRequests = async () => {
+    setAgentReqLoading(true);
+    setAgentReqError("");
+    try {
+      const res = await fetch("http://localhost:8000/api/agent-registration-requests/");
+      if (res.ok) {
+        const data = await res.json();
+        setAgentRequests(data);
+      } else {
+        setAgentReqError("Failed to fetch agent registration requests.");
+      }
+    } catch (err) {
+      setAgentReqError("Failed to fetch agent registration requests.");
+    }
+    setAgentReqLoading(false);
+  };
+
+  const handleAcceptAgent = async (id) => {
+    setAgentReqError("");
+    setAgentReqSuccess("");
+    try {
+      const res = await fetch(`http://localhost:8000/api/agent-registration-request/${id}/accept/`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        setAgentReqSuccess("Agent registration accepted and user created.");
+        setAgentRequests((prev) => prev.filter((req) => req.id !== id));
+      } else {
+        const data = await res.json();
+        setAgentReqError(data.message || "Failed to accept agent registration.");
+      }
+    } catch (err) {
+      setAgentReqError("Failed to accept agent registration.");
+    }
+  };
+
   const handleServiceSettings = () => {
     router.push('/service_management');
   };
@@ -221,6 +266,44 @@ export default function AdminDashboard() {
               <div className="text-2xl mb-2">🔔</div>
               <p className="text-sm font-medium">Notifications</p>
             </button>
+          </div>
+        </motion.div>
+
+        {/* Pending Agent Registrations */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+          className="mt-8 bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-gray-700"
+        >
+          <h2 className="text-xl font-bold text-white mb-6">Pending Agent Registrations</h2>
+          {agentReqLoading && <div className="text-blue-200 mb-4">Loading...</div>}
+          {agentReqError && <div className="text-red-300 mb-4">{agentReqError}</div>}
+          {agentReqSuccess && <div className="text-green-300 mb-4">{agentReqSuccess}</div>}
+          {agentRequests.length === 0 && !agentReqLoading && (
+            <div className="text-gray-300">No pending agent registrations.</div>
+          )}
+          <div className="space-y-4">
+            {agentRequests.map((req) => (
+              <div key={req.id} className="bg-gray-800/50 rounded-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-white font-semibold">{req.full_name}</p>
+                  <p className="text-gray-300 text-sm">Phone: {req.phone_number}</p>
+                  <p className="text-gray-300 text-sm">Email: {req.email}</p>
+                  <p className="text-gray-300 text-sm">ID Proof: {req.id_proof_type} ({req.id_proof_number})</p>
+                  {req.id_proof_file && (
+                    <a href={`http://localhost:8000/media/${req.id_proof_file}`} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline text-xs mt-1 inline-block">View ID Proof</a>
+                  )}
+                  <p className="text-gray-400 text-xs mt-1">Requested: {new Date(req.created_at).toLocaleString()}</p>
+                </div>
+                <button
+                  onClick={() => handleAcceptAgent(req.id)}
+                  className="mt-4 md:mt-0 md:ml-6 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                >
+                  Accept
+                </button>
+              </div>
+            ))}
           </div>
         </motion.div>
       </div>
