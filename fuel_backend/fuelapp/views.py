@@ -220,3 +220,47 @@ def user_delete(request, user_id):
     except Exception as e:
         print(f"Error deleting user: {e}")
         return Response({'message': f'Error deleting user: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def air_service_prices(request):
+    try:
+        air_service = Service.objects.get(type='air')
+        return Response({
+            'price_per_tyre': float(air_service.price_per_tyre),
+            'leak_detection_price': float(air_service.leak_detection_price)
+        })
+    except Service.DoesNotExist:
+        return Response({'error': 'Air service not found'}, status=404)
+
+@api_view(['GET'])
+def electric_service_prices(request):
+    try:
+        ev_service = Service.objects.get(type='ev')
+        return Response({
+            'price_basic': float(ev_service.price_basic),
+            'price_type2': float(ev_service.price_type2),
+            'price_ccs': float(ev_service.price_ccs),
+            'price_chademo': float(ev_service.price_chademo),
+            'price_bharat_dc': float(ev_service.price_bharat_dc)
+        })
+    except Service.DoesNotExist:
+        return Response({'error': 'EV service not found'}, status=404)
+
+@api_view(['GET'])
+def mechanical_service_prices(request):
+    try:
+        mech_service = Service.objects.get(type='mechanical')
+        return Response({
+            'price_dead_battery': float(mech_service.price_dead_battery),
+            'price_flat_tyre': float(mech_service.price_flat_tyre),
+            'price_overheating': float(mech_service.price_overheating),
+            'price_brake_issues': float(mech_service.price_brake_issues),
+            'price_starter_motor': float(mech_service.price_starter_motor),
+            'price_clutch_gear': float(mech_service.price_clutch_gear),
+            'price_electrical': float(mech_service.price_electrical),
+            'price_fluid_leak': float(mech_service.price_fluid_leak),
+            'price_chain_belt': float(mech_service.price_chain_belt),
+            'price_key_lockout': float(mech_service.price_key_lockout)
+        })
+    except Service.DoesNotExist:
+        return Response({'error': 'Mechanical service not found'}, status=404)

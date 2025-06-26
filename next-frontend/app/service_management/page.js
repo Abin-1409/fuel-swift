@@ -165,7 +165,30 @@ export default function ServiceManagement() {
         unit: getUnitFromType(newService.type),
         description: newService.description || getDefaultDescription(newService.type),
         stock: needsStockField(newService.type) ? (newService.stock || getDefaultStock(newService.type)) : 0,
-        price: newService.price || getDefaultPrice(newService.type)
+        price: newService.price || getDefaultPrice(newService.type),
+        ...(newService.type === 'air' ? {
+          price_per_tyre: newService.price_per_tyre,
+          leak_detection_price: newService.leak_detection_price
+        } : {}),
+        ...(newService.type === 'ev' ? {
+          price_basic: newService.price_basic,
+          price_type2: newService.price_type2,
+          price_ccs: newService.price_ccs,
+          price_chademo: newService.price_chademo,
+          price_bharat_dc: newService.price_bharat_dc
+        } : {}),
+        ...(newService.type === 'mechanical' ? {
+          price_dead_battery: newService.price_dead_battery,
+          price_flat_tyre: newService.price_flat_tyre,
+          price_overheating: newService.price_overheating,
+          price_brake_issues: newService.price_brake_issues,
+          price_starter_motor: newService.price_starter_motor,
+          price_clutch_gear: newService.price_clutch_gear,
+          price_electrical: newService.price_electrical,
+          price_fluid_leak: newService.price_fluid_leak,
+          price_chain_belt: newService.price_chain_belt,
+          price_key_lockout: newService.price_key_lockout
+        } : {})
       };
 
       const response = await fetch(`${API_BASE_URL}/api/services/create/`, {
@@ -338,6 +361,84 @@ export default function ServiceManagement() {
                 onChange={(e) => setNewService({...newService, price: parseFloat(e.target.value)})}
                 className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
               />
+              {newService.type === 'air' && (
+                <>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Price per Tyre (₹)"
+                    value={newService.price_per_tyre || ''}
+                    onChange={e => setNewService({...newService, price_per_tyre: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Leak Detection Price (₹)"
+                    value={newService.leak_detection_price || ''}
+                    onChange={e => setNewService({...newService, leak_detection_price: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                </>
+              )}
+              {newService.type === 'ev' && (
+                <>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Basic Charger Price (₹)"
+                    value={newService.price_basic || ''}
+                    onChange={e => setNewService({...newService, price_basic: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Type 2 Charger Price (₹)"
+                    value={newService.price_type2 || ''}
+                    onChange={e => setNewService({...newService, price_type2: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="CCS Charger Price (₹)"
+                    value={newService.price_ccs || ''}
+                    onChange={e => setNewService({...newService, price_ccs: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="CHAdeMO Charger Price (₹)"
+                    value={newService.price_chademo || ''}
+                    onChange={e => setNewService({...newService, price_chademo: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Bharat DC-001 Charger Price (₹)"
+                    value={newService.price_bharat_dc || ''}
+                    onChange={e => setNewService({...newService, price_bharat_dc: parseFloat(e.target.value)})}
+                    className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+                  />
+                </>
+              )}
+              {newService.type === 'mechanical' && (
+                <>
+                  <input type="number" step="0.01" placeholder="Dead Battery Price (₹)" value={newService.price_dead_battery || ''} onChange={e => setNewService({...newService, price_dead_battery: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Flat Tyre Price (₹)" value={newService.price_flat_tyre || ''} onChange={e => setNewService({...newService, price_flat_tyre: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Overheating Price (₹)" value={newService.price_overheating || ''} onChange={e => setNewService({...newService, price_overheating: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Brake Issues Price (₹)" value={newService.price_brake_issues || ''} onChange={e => setNewService({...newService, price_brake_issues: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Starter Motor Price (₹)" value={newService.price_starter_motor || ''} onChange={e => setNewService({...newService, price_starter_motor: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Clutch/Gear Price (₹)" value={newService.price_clutch_gear || ''} onChange={e => setNewService({...newService, price_clutch_gear: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Electrical Issues Price (₹)" value={newService.price_electrical || ''} onChange={e => setNewService({...newService, price_electrical: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Fluid Leak Price (₹)" value={newService.price_fluid_leak || ''} onChange={e => setNewService({...newService, price_fluid_leak: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Chain/Belt Price (₹)" value={newService.price_chain_belt || ''} onChange={e => setNewService({...newService, price_chain_belt: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                  <input type="number" step="0.01" placeholder="Key Lockout Price (₹)" value={newService.price_key_lockout || ''} onChange={e => setNewService({...newService, price_key_lockout: parseFloat(e.target.value)})} className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400" />
+                </>
+              )}
               <select
                 value={newService.status}
                 onChange={(e) => setNewService({...newService, status: e.target.value})}
@@ -499,6 +600,84 @@ function ServiceEditForm({ service, onSave, onCancel, getStockLabel, getPriceLab
           <option value="inactive">Inactive</option>
           <option value="maintenance">Maintenance</option>
         </select>
+        {editedService.type === 'air' && (
+          <>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Price per Tyre (₹)"
+              value={editedService.price_per_tyre || ''}
+              onChange={e => setEditedService({...editedService, price_per_tyre: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Leak Detection Price (₹)"
+              value={editedService.leak_detection_price || ''}
+              onChange={e => setEditedService({...editedService, leak_detection_price: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+          </>
+        )}
+        {editedService.type === 'ev' && (
+          <>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Basic Charger Price (₹)"
+              value={editedService.price_basic || ''}
+              onChange={e => setEditedService({...editedService, price_basic: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Type 2 Charger Price (₹)"
+              value={editedService.price_type2 || ''}
+              onChange={e => setEditedService({...editedService, price_type2: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="CCS Charger Price (₹)"
+              value={editedService.price_ccs || ''}
+              onChange={e => setEditedService({...editedService, price_ccs: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="CHAdeMO Charger Price (₹)"
+              value={editedService.price_chademo || ''}
+              onChange={e => setEditedService({...editedService, price_chademo: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Bharat DC-001 Charger Price (₹)"
+              value={editedService.price_bharat_dc || ''}
+              onChange={e => setEditedService({...editedService, price_bharat_dc: parseFloat(e.target.value)})}
+              className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+            />
+          </>
+        )}
+        {editedService.type === 'mechanical' && (
+          <>
+            <input type="number" step="0.01" placeholder="Dead Battery Price (₹)" value={editedService.price_dead_battery || ''} onChange={e => setEditedService({...editedService, price_dead_battery: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Flat Tyre Price (₹)" value={editedService.price_flat_tyre || ''} onChange={e => setEditedService({...editedService, price_flat_tyre: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Overheating Price (₹)" value={editedService.price_overheating || ''} onChange={e => setEditedService({...editedService, price_overheating: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Brake Issues Price (₹)" value={editedService.price_brake_issues || ''} onChange={e => setEditedService({...editedService, price_brake_issues: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Starter Motor Price (₹)" value={editedService.price_starter_motor || ''} onChange={e => setEditedService({...editedService, price_starter_motor: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Clutch/Gear Price (₹)" value={editedService.price_clutch_gear || ''} onChange={e => setEditedService({...editedService, price_clutch_gear: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Electrical Issues Price (₹)" value={editedService.price_electrical || ''} onChange={e => setEditedService({...editedService, price_electrical: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Fluid Leak Price (₹)" value={editedService.price_fluid_leak || ''} onChange={e => setEditedService({...editedService, price_fluid_leak: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Chain/Belt Price (₹)" value={editedService.price_chain_belt || ''} onChange={e => setEditedService({...editedService, price_chain_belt: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+            <input type="number" step="0.01" placeholder="Key Lockout Price (₹)" value={editedService.price_key_lockout || ''} onChange={e => setEditedService({...editedService, price_key_lockout: parseFloat(e.target.value)})} className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white" />
+          </>
+        )}
       </div>
       <div className="flex space-x-2">
         <button

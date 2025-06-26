@@ -18,6 +18,14 @@ export default function ElectricCharging() {
   });
   const [error, setError] = useState('');
   const [availableChargers, setAvailableChargers] = useState(null);
+  const [prices, setPrices] = useState({});
+
+  // Fetch EV charger prices
+  useEffect(() => {
+    fetch('http://localhost:8000/api/services/electric/prices/')
+      .then(res => res.json())
+      .then(data => setPrices(data));
+  }, []);
 
   // Get current location and check available chargers
   useEffect(() => {
@@ -107,6 +115,27 @@ export default function ElectricCharging() {
       setError('An error occurred while submitting your request');
     }
   };
+
+  // Calculate total price
+  const getBasePrice = () => {
+    switch (formData.chargerType) {
+      case 'basic': return prices.price_basic || 0;
+      case 'type2': return prices.price_type2 || 0;
+      case 'ccs': return prices.price_ccs || 0;
+      case 'chademo': return prices.price_chademo || 0;
+      case 'bharat_dc': return prices.price_bharat_dc || 0;
+      default: return 0;
+    }
+  };
+  const getMultiplier = () => {
+    switch (formData.chargingRequirement) {
+      case 'emergency': return 1;
+      case 'partial': return 1.5;
+      case 'full': return 2;
+      default: return 0;
+    }
+  };
+  const total = getBasePrice() * getMultiplier();
 
   if (loading) {
     return (
@@ -273,6 +302,11 @@ export default function ElectricCharging() {
                 placeholder="Any specific instructions or details about your vehicle"
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
               />
+            </div>
+
+            {/* Total Price Display */}
+            <div className="mt-4 text-lg font-bold text-green-700">
+              Total: ₹{total}
             </div>
 
             <div className="pt-4">

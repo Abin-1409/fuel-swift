@@ -12,11 +12,23 @@ export default function AirService() {
     vehicleType: '',
     tyreCount: '',
     tyreType: '',
-    leakDetection: '',
     notes: ''
   });
+  const [leakDetectionEnabled, setLeakDetectionEnabled] = useState(false);
   const [error, setError] = useState('');
   const [availableTechnicians, setAvailableTechnicians] = useState(null);
+  const [prices, setPrices] = useState({ price_per_tyre: 10, leak_detection_price: 20 });
+
+  // Fetch air service prices
+  useEffect(() => {
+    fetch('http://localhost:8000/api/services/air/prices/')
+      .then(res => res.json())
+      .then(data => {
+        if (data.price_per_tyre && data.leak_detection_price) {
+          setPrices(data);
+        }
+      });
+  }, []);
 
   // Get current location and check available technicians
   useEffect(() => {
@@ -29,21 +41,17 @@ export default function AirService() {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
               });
-              
               // Check available technicians
               try {
                 const response = await fetch('/api/services/air/technicians');
                 const data = await response.json();
                 setAvailableTechnicians(data.technicians);
               } catch (err) {
-                console.error('Error checking technicians:', err);
                 setError('Unable to check available technicians');
               }
-              
               setLoading(false);
             },
             (error) => {
-              console.error('Error getting location:', error);
               setError('Unable to get your location. Please enable location services.');
               setLoading(false);
             }
@@ -57,7 +65,6 @@ export default function AirService() {
         setLoading(false);
       }
     };
-
     getLocation();
   }, []);
 
@@ -69,20 +76,21 @@ export default function AirService() {
     }));
   };
 
+  // Calculate total price
+  const tyreCount = parseInt(formData.tyreCount) || 0;
+  const total = (prices.price_per_tyre * tyreCount) + (leakDetectionEnabled ? prices.leak_detection_price : 0);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     if (!location) {
       setError('Please enable location services to continue');
       return;
     }
-
-    if (!formData.vehicleType || !formData.tyreCount || !formData.tyreType || !formData.leakDetection) {
+    if (!formData.vehicleType || !formData.tyreCount || !formData.tyreType) {
       setError('Please fill in all required fields');
       return;
     }
-
     try {
       const response = await fetch('/api/services/air', {
         method: 'POST',
@@ -91,11 +99,12 @@ export default function AirService() {
         },
         body: JSON.stringify({
           ...formData,
+          leakDetection: leakDetectionEnabled ? 'yes' : 'no',
           location,
-          serviceType: 'Air Service'
+          serviceType: 'Air Service',
+          total
         }),
       });
-
       if (response.ok) {
         router.push('/confirmation');
       } else {
@@ -131,19 +140,16 @@ export default function AirService() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Tyre Air Service</h1>
             <p className="text-gray-600">Quick air refill and leak detection service</p>
           </div>
-
           {error && (
             <div className="mb-6 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
               <span className="block sm:inline">{error}</span>
             </div>
           )}
-
           {availableTechnicians !== null && (
             <div className="mb-6 bg-yellow-50 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative">
               <span className="block sm:inline">Available technicians in your area: {availableTechnicians}</span>
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Location Display */}
             <div className="bg-yellow-50 p-4 rounded-lg">
@@ -162,7 +168,6 @@ export default function AirService() {
                 </div>
               </div>
             </div>
-
             {/* Vehicle Type */}
             <div>
               <label htmlFor="vehicleType" className="block text-sm font-medium text-gray-700">
@@ -183,7 +188,6 @@ export default function AirService() {
                 <option value="truck">Truck</option>
               </select>
             </div>
-
             {/* Number of Tyres */}
             <div>
               <label htmlFor="tyreCount" className="block text-sm font-medium text-gray-700">
@@ -200,13 +204,11 @@ export default function AirService() {
                 <option value="">Select number of tyres</option>
                 <option value="1">1 Tyre</option>
                 <option value="2">2 Tyres</option>
-                <option value="3">3 Tyres</option>
                 <option value="4">4 Tyres</option>
                 <option value="6">6 Tyres</option>
                 <option value="8">8 Tyres</option>
               </select>
             </div>
-
             {/* Tyre Type */}
             <div>
               <label htmlFor="tyreType" className="block text-sm font-medium text-gray-700">
@@ -225,26 +227,19 @@ export default function AirService() {
                 <option value="tube">Tube</option>
               </select>
             </div>
-
-            {/* Leak Detection */}
+            {/* Leak Detection Checkbox */}
             <div>
-              <label htmlFor="leakDetection" className="block text-sm font-medium text-gray-700">
-                Leak Detection Required? *
+              <label className="block text-sm font-medium text-gray-700">
+                Leak Detection
               </label>
-              <select
-                id="leakDetection"
-                name="leakDetection"
-                value={formData.leakDetection}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
-              >
-                <option value="">Select option</option>
-                <option value="yes">Yes, check for leaks</option>
-                <option value="no">No, just air refill</option>
-              </select>
+              <input
+                type="checkbox"
+                checked={leakDetectionEnabled}
+                onChange={e => setLeakDetectionEnabled(e.target.checked)}
+                className="mr-2"
+              />
+              <span>Enable Leak Detection (+₹{prices.leak_detection_price})</span>
             </div>
-
             {/* Notes */}
             <div>
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
@@ -260,7 +255,10 @@ export default function AirService() {
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
               />
             </div>
-
+            {/* Total Price Display */}
+            <div className="mt-4 text-lg font-bold text-blue-700">
+              Total: ₹{total}
+            </div>
             <div className="pt-4">
               <button
                 type="submit"

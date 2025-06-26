@@ -18,6 +18,7 @@ export default function MechanicalWork() {
   const [error, setError] = useState('');
   const [availableMechanics, setAvailableMechanics] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [prices, setPrices] = useState({});
 
   const mechanicalIssues = [
     {
@@ -71,6 +72,13 @@ export default function MechanicalWork() {
       description: 'Locked out or error in anti-theft system disabling start.'
     }
   ];
+
+  // Fetch mechanical issue prices
+  useEffect(() => {
+    fetch('http://localhost:8000/api/services/mechanical/prices/')
+      .then(res => res.json())
+      .then(data => setPrices(data));
+  }, []);
 
   // Get current location and check available mechanics
   useEffect(() => {
@@ -181,6 +189,24 @@ export default function MechanicalWork() {
       setError('An error occurred while submitting your request');
     }
   };
+
+  // Calculate total price
+  const getIssuePrice = () => {
+    switch (formData.issue) {
+      case 'dead_battery': return prices.price_dead_battery || 0;
+      case 'flat_tyre': return prices.price_flat_tyre || 0;
+      case 'overheating': return prices.price_overheating || 0;
+      case 'brake_issues': return prices.price_brake_issues || 0;
+      case 'starter_motor': return prices.price_starter_motor || 0;
+      case 'clutch_gear': return prices.price_clutch_gear || 0;
+      case 'electrical': return prices.price_electrical || 0;
+      case 'fluid_leak': return prices.price_fluid_leak || 0;
+      case 'chain_belt': return prices.price_chain_belt || 0;
+      case 'key_lockout': return prices.price_key_lockout || 0;
+      default: return 0;
+    }
+  };
+  const total = getIssuePrice();
 
   if (loading) {
     return (
@@ -302,6 +328,10 @@ export default function MechanicalWork() {
                   {mechanicalIssues.find(i => i.value === formData.issue)?.description}
                 </p>
               )}
+            </div>
+            {/* Total Price Display */}
+            <div className="mt-4 text-lg font-bold text-orange-700">
+              Total: ₹{total}
             </div>
 
             {/* Image Upload */}
