@@ -74,6 +74,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleRejectAgent = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/agent-registration-request/${id}/reject/`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setAgentReqSuccess('Agent registration rejected.');
+        setAgentRequests((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        const data = await res.json();
+        setAgentReqError(data.message || 'Failed to reject agent registration.');
+      }
+    } catch (err) {
+      setAgentReqError('Failed to reject agent registration.');
+    }
+  };
+
   const handleServiceSettings = () => {
     router.push('/service_management');
   };
@@ -258,13 +275,16 @@ export default function AdminDashboard() {
               <div className="text-2xl mb-2">⚙️</div>
               <p className="text-sm font-medium">Service Settings</p>
             </button>
+            <button 
+              onClick={() => router.push('/agent_list')}
+              className="p-4 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 rounded-lg transition-colors border border-orange-500/30 cursor-pointer"
+            >
+              <div className="text-2xl mb-2">🛡️</div>
+              <p className="text-sm font-medium">Registered Agents</p>
+            </button>
             <button className="p-4 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-colors border border-purple-500/30">
               <div className="text-2xl mb-2">📊</div>
               <p className="text-sm font-medium">View Reports</p>
-            </button>
-            <button className="p-4 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 rounded-lg transition-colors border border-orange-500/30">
-              <div className="text-2xl mb-2">🔔</div>
-              <p className="text-sm font-medium">Notifications</p>
             </button>
           </div>
         </motion.div>
@@ -292,7 +312,16 @@ export default function AdminDashboard() {
                   <p className="text-gray-300 text-sm">Email: {req.email}</p>
                   <p className="text-gray-300 text-sm">ID Proof: {req.id_proof_type} ({req.id_proof_number})</p>
                   {req.id_proof_file && (
-                    <a href={`http://localhost:8000/media/${req.id_proof_file}`} target="_blank" rel="noopener noreferrer" className="text-blue-300 underline text-xs mt-1 inline-block">View ID Proof</a>
+                    <a
+                      href={req.id_proof_file.startsWith('http')
+                        ? req.id_proof_file
+                        : `http://localhost:8000${req.id_proof_file}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-300 underline text-xs mt-1 inline-block"
+                    >
+                      View ID Proof
+                    </a>
                   )}
                   <p className="text-gray-400 text-xs mt-1">Requested: {new Date(req.created_at).toLocaleString()}</p>
                 </div>
@@ -301,6 +330,12 @@ export default function AdminDashboard() {
                   className="mt-4 md:mt-0 md:ml-6 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
                 >
                   Accept
+                </button>
+                <button
+                  onClick={() => handleRejectAgent(req.id)}
+                  className="mt-4 md:mt-0 md:ml-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+                >
+                  Reject
                 </button>
               </div>
             ))}

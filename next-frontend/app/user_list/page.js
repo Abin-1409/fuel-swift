@@ -82,9 +82,19 @@ export default function UserListPage() {
                 className="bg-white rounded-xl shadow-md p-6 border border-blue-100 hover:shadow-lg transition-shadow relative"
               >
                 <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-xl font-bold text-blue-700 mr-4">
-                    {user.first_name.charAt(0)}{user.last_name.charAt(0)}
-                  </div>
+                  {user.photo ? (
+                    <img
+                      src={user.photo.startsWith('http')
+                        ? user.photo
+                        : `http://localhost:8000${user.photo}`}
+                      alt={user.first_name + ' ' + user.last_name}
+                      className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-blue-300"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center text-xl font-bold text-blue-700 mr-4">
+                      {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                    </div>
+                  )}
                   <div>
                     <div className="text-lg font-semibold text-blue-900">
                       {user.first_name} {user.last_name}

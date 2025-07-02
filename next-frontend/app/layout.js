@@ -62,6 +62,12 @@ function NavBar() {
               >
                 Services
               </Link>
+              <Link 
+                href="/search" 
+                className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/search')}`}
+              >
+                Self-Repair
+              </Link>
               {isLoggedIn && firstName && (
                 <span className="px-3 py-2 rounded-md text-sm font-semibold bg-gradient-to-r from-blue-400 to-purple-400 text-white shadow-md animate-fade-in">
                   Hi, {firstName}
@@ -143,6 +149,13 @@ function NavBar() {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Home
+          </Link>
+          <Link 
+            href="/search" 
+            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/search')}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Self-Repair
           </Link>
           <Link 
             href="/petrol_service" 

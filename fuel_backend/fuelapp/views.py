@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from .models import CustomUser, Service, ServiceRequest, AgentRegistrationRequest
+from .models import CustomUser, Service, ServiceRequest, AgentRegistrationRequest, RejectedAgentEmail
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers
 from decimal import Decimal
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.db import models
 
 # Create your views here.
 
@@ -307,6 +308,10 @@ def accept_agent_registration_request(request, req_id):
         name_parts = reg_req.full_name.strip().split()
         first_name = name_parts[0]
         last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+        # Store the full URL of the id_proof_file in the photo field for direct use in frontend
+        id_proof_url = reg_req.id_proof_file.url if reg_req.id_proof_file else ''
+        if not id_proof_url:
+            return Response({'message': 'ID proof file is missing or not accessible.'}, status=status.HTTP_400_BAD_REQUEST)
         user = CustomUser.objects.create_user(
             phone_number=reg_req.phone_number,
             email=reg_req.email,
@@ -314,11 +319,26 @@ def accept_agent_registration_request(request, req_id):
             first_name=first_name,
             last_name=last_name,
             address='',
-            photo=reg_req.id_proof_file.name,
+            photo=id_proof_url,  # Store the full URL
             user_type='agent'
         )
         reg_req.delete()
         return Response({'message': 'Agent registration accepted and user created.'}, status=status.HTTP_201_CREATED)
+    except AgentRegistrationRequest.DoesNotExist:
+        return Response({'message': 'Registration request not found.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reject_agent_registration_request(request, req_id):
+    try:
+        reg_req = AgentRegistrationRequest.objects.get(id=req_id)
+        # Store the rejected email
+        RejectedAgentEmail.objects.get_or_create(email=reg_req.email)
+        reg_req.delete()
+        return Response({'message': 'Agent registration request rejected.'}, status=status.HTTP_200_OK)
     except AgentRegistrationRequest.DoesNotExist:
         return Response({'message': 'Registration request not found.'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -332,6 +352,9 @@ def agent_registration_status(request):
     # Check if agent is approved
     if CustomUser.objects.filter(email=email, user_type='agent').exists():
         return Response({'status': 'approved'}, status=status.HTTP_200_OK)
+    # Check if rejected
+    if RejectedAgentEmail.objects.filter(email=email).exists():
+        return Response({'status': 'rejected'}, status=status.HTTP_200_OK)
     # Check if request is pending
     if AgentRegistrationRequest.objects.filter(email=email).exists():
         return Response({'status': 'pending'}, status=status.HTTP_200_OK)

@@ -137,3 +137,6 @@ AUTHENTICATION_BACKENDS = [
     'fuelapp.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'  # or os.path.join(BASE_DIR, 'media')

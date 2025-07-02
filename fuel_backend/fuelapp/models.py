@@ -140,3 +140,7 @@ class AgentRegistrationRequest(models.Model):
     
     def __str__(self):
         return f"{self.full_name} ({self.email}) - Pending Agent Registration"
+
+class RejectedAgentEmail(models.Model):
+    email = models.EmailField(unique=True)
+    rejected_at = models.DateTimeField(auto_now_add=True)

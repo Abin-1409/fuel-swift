@@ -106,6 +106,8 @@ export default function AgentRegistration() {
           setStatusResult("Your registration is approved! You can now login.");
         } else if (data.status === "pending") {
           setStatusResult("Your registration is still pending.");
+        } else if (data.status === "rejected") {
+          setStatusResult("Your registration request was rejected.");
         } else {
           setStatusResult(data.message || "No registration found for this email.");
         }

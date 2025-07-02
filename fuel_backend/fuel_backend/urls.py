@@ -16,8 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from fuelapp import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('fuelapp.urls')),
+    path('api/agent-registration-request/<int:req_id>/reject/', views.reject_agent_registration_request, name='reject_agent_registration_request'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
