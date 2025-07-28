@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from .models import CustomUser, Service, ServiceRequest, AgentRegistrationRequest, RejectedAgentEmail
+from .models import CustomUser, Service, ServiceRequest, AgentRegistrationRequest, RejectedAgentEmail, Payment
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -10,6 +10,8 @@ from rest_framework import serializers
 from decimal import Decimal
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db import models
+import razorpay
+from django.conf import settings
 
 # Create your views here.
 
@@ -129,6 +131,7 @@ def service_detail(request, pk):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_service_request(request):
+    print('DEBUG: Received service request data:', request.data)
     """Create a new service request"""
     try:
         data = request.data
@@ -142,26 +145,37 @@ def create_service_request(request):
         
         # Get user (you might want to get this from authentication token)
         user_email = data.get('user_email')
+        print('DEBUG: Searching for user_email:', user_email)
+        print('DEBUG: All user emails:', list(CustomUser.objects.values_list('email', flat=True)))
         try:
             user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
-            return Response({'message': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+            print('DEBUG: User not found by email, trying phone_number...')
+            try:
+                user = CustomUser.objects.get(phone_number=user_email)
+            except CustomUser.DoesNotExist:
+                print('DEBUG: User not found by phone_number either.')
+                return Response({'message': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Calculate quantity and amount
         quantity_liters = data.get('quantity_liters')
         amount_rupees = data.get('amount_rupees')
         total_amount = 0
-        
-        if quantity_liters:
-            quantity_liters = Decimal(quantity_liters)
-            total_amount = quantity_liters * service.price
-            amount_rupees = total_amount
-        elif amount_rupees:
-            amount_rupees = Decimal(amount_rupees)
-            quantity_liters = amount_rupees / service.price
-            total_amount = amount_rupees
+
+        if service.type in ['petrol', 'diesel']:
+            if quantity_liters:
+                quantity_liters = Decimal(quantity_liters)
+                total_amount = quantity_liters * service.price
+                amount_rupees = total_amount
+            elif amount_rupees:
+                amount_rupees = Decimal(amount_rupees)
+                quantity_liters = amount_rupees / service.price
+                total_amount = amount_rupees
+            else:
+                return Response({'message': 'Either quantity_liters or amount_rupees must be provided'}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'message': 'Either quantity_liters or amount_rupees must be provided'}, status=status.HTTP_400_BAD_REQUEST)
+            # For non-fuel services, use total_amount from frontend
+            total_amount = Decimal(data.get('total_amount', 0))
         
         # Check stock for fuel services
         if service.type in ['petrol', 'diesel'] and quantity_liters > service.stock:
@@ -187,13 +201,27 @@ def create_service_request(request):
             service.stock -= quantity_liters
             service.save()
         
+        # Create Payment object (status: initiated)
+        payment_method = data.get('payment_method', 'initiated')  # 'cod' or 'initiated'
+        payment_status = 'cod' if payment_method == 'cod' else 'initiated'
+        payment = Payment.objects.create(
+            user=user,
+            service_request=service_request,
+            amount=total_amount,
+            status=payment_status,
+            method=payment_method if payment_method else 'razorpay',
+        )
+        
         serializer = ServiceRequestSerializer(service_request)
         return Response({
             'message': 'Service request created successfully',
-            'request': serializer.data
+            'request': serializer.data,
+            'payment_id': payment.id,
+            'total_amount': str(total_amount)
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
+        print('DEBUG: Error in create_service_request:', str(e))
         return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @csrf_exempt
@@ -273,6 +301,24 @@ def mechanical_service_prices(request):
         })
     except Service.DoesNotExist:
         return Response({'error': 'Mechanical service not found'}, status=404)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def available_mechanics(request):
+    # Placeholder: return a static number of available mechanics
+    return Response({'mechanics': 3})
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def available_air_technicians(request):
+    # Placeholder: return a static number of available technicians
+    return Response({'technicians': 2})
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def available_electric_chargers(request):
+    # Placeholder: return a static number of available chargers
+    return Response({'chargers': 1})
 
 @csrf_exempt
 @api_view(['POST'])
@@ -359,3 +405,58 @@ def agent_registration_status(request):
     if AgentRegistrationRequest.objects.filter(email=email).exists():
         return Response({'status': 'pending'}, status=status.HTTP_200_OK)
     return Response({'message': 'No registration found for this email.'}, status=status.HTTP_404_NOT_FOUND)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_razorpay_order(request):
+    """Create a Razorpay order and return the order_id to the frontend."""
+    data = request.data
+    amount = data.get('amount')
+    if not amount:
+        return Response({'message': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        order = client.order.create({
+            'amount': int(float(amount) * 100),  # Razorpay expects paise
+            'currency': 'INR',
+            'payment_capture': 1
+        })
+        return Response({'order_id': order['id']}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': f'Error creating Razorpay order: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_razorpay_payment(request):
+    """Verify Razorpay payment signature and update Payment status."""
+    data = request.data
+    payment_id = data.get('razorpay_payment_id')
+    order_id = data.get('razorpay_order_id')
+    signature = data.get('razorpay_signature')
+    payment_db_id = data.get('payment_db_id')  # Our Payment model ID
+    if not (payment_id and order_id and signature and payment_db_id):
+        return Response({'message': 'Missing payment verification data'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        params_dict = {
+            'razorpay_order_id': order_id,
+            'razorpay_payment_id': payment_id,
+            'razorpay_signature': signature
+        }
+        client.utility.verify_payment_signature(params_dict)
+        # Update Payment model
+        payment = Payment.objects.get(id=payment_db_id)
+        payment.status = 'success'
+        payment.payment_id = payment_id
+        payment.method = 'razorpay'
+        payment.save()
+        return Response({'message': 'Payment verified and updated.'}, status=status.HTTP_200_OK)
+    except razorpay.errors.SignatureVerificationError:
+        payment = Payment.objects.get(id=payment_db_id)
+        payment.status = 'failed'
+        payment.save()
+        return Response({'message': 'Payment signature verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'message': f'Error verifying payment: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

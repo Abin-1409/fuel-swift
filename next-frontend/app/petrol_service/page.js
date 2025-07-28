@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import LoadingSpinner from '../components/LoadingSpinner';
+import BackButton from '../components/BackButton';
+import Notification from '../components/Notification';
+import RazorpayButton from '../components/RazorpayButton';
 
 export default function PetrolService() {
   const router = useRouter();
@@ -20,6 +24,13 @@ export default function PetrolService() {
   const [error, setError] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
   const [lastModifiedField, setLastModifiedField] = useState(null); // Track which field was last modified
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [orderId, setOrderId] = useState(null); // For Razorpay order
+  const [paymentId, setPaymentId] = useState(null); // Our Payment model ID
+  const [realAmount, setRealAmount] = useState(null); // Amount from backend
 
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -97,19 +108,23 @@ export default function PetrolService() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     if (!location) {
       setError('Please enable location services to continue');
+      setIsSubmitting(false);
       return;
     }
 
     if (!formData.vehicleType || !formData.vehicleNumber || (!formData.quantityLiters && !formData.amountRupees) || !formData.deliveryTime) {
       setError('Please fill in all required fields');
+      setIsSubmitting(false);
       return;
     }
 
     if (!serviceData) {
       setError('Service information not available');
+      setIsSubmitting(false);
       return;
     }
 
@@ -117,6 +132,7 @@ export default function PetrolService() {
     const userEmail = localStorage.getItem('userEmail');
     if (!userEmail) {
       setError('Please log in to continue');
+      setIsSubmitting(false);
       router.push('/login');
       return;
     }
@@ -134,7 +150,6 @@ export default function PetrolService() {
         location_lng: location.lng,
         notes: formData.notes
       };
-
       const response = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
         headers: {
@@ -142,27 +157,184 @@ export default function PetrolService() {
         },
         body: JSON.stringify(requestData),
       });
-
       if (response.ok) {
-        const result = await response.json();
-        router.push('/confirmation');
+        const data = await response.json();
+        setPaymentId(data.payment_id);
+        setRealAmount(Number(data.total_amount));
+        setShowPaymentOptions(true);
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to submit request');
+        setNotification({
+          show: true,
+          message: data.message || 'Failed to submit request',
+          type: 'error'
+        });
       }
     } catch (err) {
       setError('An error occurred while submitting your request');
+      setNotification({
+        show: true,
+        message: 'An error occurred while submitting your request',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handlePayLater = async () => {
+    // Mark payment as COD in backend
+    setIsSubmitting(true);
+    try {
+      const requestData = {
+        service_type: 'petrol',
+        user_email: userEmail,
+        vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
+        quantity_liters: formData.quantityLiters || null,
+        amount_rupees: formData.amountRupees || null,
+        delivery_time: formData.deliveryTime,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        notes: formData.notes,
+        payment_method: 'cod'
+      };
+      await fetch(`${API_BASE_URL}/api/service-request/create/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+    } catch (err) {}
+    setShowPaymentOptions(false);
+    setShowConfirmation(true);
+    setNotification({
+      show: true,
+      message: 'Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
+      type: 'success'
+    });
+    setIsSubmitting(false);
+  };
+
+  const handleRazorpayOpen = async () => {
+    // Call backend to create Razorpay order
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/payment/create-order/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: realAmount })
+      });
+      const data = await res.json();
+      setOrderId(data.order_id);
+    } catch (err) {
+      setNotification({ show: true, message: 'Failed to initiate payment.', type: 'error' });
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleRazorpaySuccess = async (response) => {
+    // Call backend to verify payment
+    setIsSubmitting(true);
+    try {
+      await fetch(`${API_BASE_URL}/api/payment/verify/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature,
+          payment_db_id: paymentId
+        })
+      });
+    } catch (err) {}
+    setShowPaymentOptions(false);
+    setShowConfirmation(true);
+    setNotification({
+      show: true,
+      message: 'Payment successful! Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
+      type: 'success'
+    });
+    setIsSubmitting(false);
+  };
+
+  const handleRazorpayFailure = () => {
+    setNotification({
+      show: true,
+      message: 'Payment was not completed.',
+      type: 'error'
+    });
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center">
-          <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-6 text-gray-600 text-lg font-medium">Getting your location...</p>
-          <p className="mt-2 text-gray-500 text-sm">Please enable location services</p>
+        <LoadingSpinner 
+          size="xlarge" 
+          variant="location" 
+          message="Getting your location and checking stock..."
+          showMessage={true}
+        />
+      </div>
+    );
+  }
+
+  if (showPaymentOptions) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4">Choose Payment Option</h2>
+          <p className="mb-6 text-gray-600">How would you like to pay for your service?</p>
+          <button
+            onClick={async () => { await handleRazorpayOpen(); }}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-4"
+            disabled={isSubmitting}
+          >
+            Pay Now (Razorpay)
+          </button>
+          {orderId && (
+            <RazorpayButton
+              amount={realAmount}
+              orderId={orderId}
+              user={{ name: '', email: userEmail || '', phone: '' }}
+              onSuccess={handleRazorpaySuccess}
+              onFailure={handleRazorpayFailure}
+              buttonText="Proceed to Pay"
+            />
+          )}
+          <button
+            onClick={handlePayLater}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            disabled={isSubmitting}
+          >
+            Pay Later (Cash on Delivery)
+          </button>
         </div>
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.show}
+          onClose={() => setNotification({ ...notification, show: false })}
+        />
+      </div>
+    );
+  }
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4">Request Submitted</h2>
+          <p className="mb-6 text-gray-600">Request submitted to admin. Admin will assign a mechanic in your area. Please wait.</p>
+        </div>
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.show}
+          onClose={() => setNotification({ ...notification, show: false })}
+        />
       </div>
     );
   }
@@ -170,23 +342,33 @@ export default function PetrolService() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-6">
+          <BackButton href="/service" variant="ghost" />
+        </div>
+        
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-xl p-8"
+          className="bg-white rounded-2xl shadow-xl p-8 card-enhanced"
         >
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Petrol Delivery Request</h1>
-            <p className="text-gray-600">Emergency fuel delivery to your location</p>
-            {serviceData && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  Current Price: ₹{serviceData.price} per liter
-                  {serviceData.stock > 0 && ` | Available: ${serviceData.stock} liters`}
-                </p>
-              </div>
-            )}
-          </div>
+                      <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2 heading-responsive">Petrol Delivery Request</h1>
+              <p className="text-gray-600 text-responsive">Emergency fuel delivery to your location</p>
+              {serviceData && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="mt-4 p-3 bg-blue-50 rounded-lg"
+                >
+                  <p className="text-sm text-blue-800">
+                    Current Price: ₹{serviceData.price} per liter
+                    {serviceData.stock > 0 && ` | Available: ${serviceData.stock} liters`}
+                  </p>
+                </motion.div>
+              )}
+            </div>
 
           {error && (
             <div className="mb-6 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -195,6 +377,13 @@ export default function PetrolService() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Notification Component */}
+            <Notification
+              message={notification.message}
+              type={notification.type}
+              isVisible={notification.show}
+              onClose={() => setNotification({ ...notification, show: false })}
+            />
             {/* Location Display */}
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center space-x-3">
@@ -374,13 +563,22 @@ export default function PetrolService() {
             </div>
 
             <div className="pt-4">
-              <button
+              <motion.button
                 type="submit"
-                disabled={!formData.quantityLiters && !formData.amountRupees}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={!formData.quantityLiters && !formData.amountRupees || isSubmitting}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed btn-enhanced"
               >
-                Request Petrol Delivery
-              </button>
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <LoadingSpinner size="small" variant="dots" showMessage={false} />
+                    <span className="ml-2">Submitting...</span>
+                  </div>
+                ) : (
+                  'Request Petrol Delivery'
+                )}
+              </motion.button>
             </div>
           </form>
         </motion.div>

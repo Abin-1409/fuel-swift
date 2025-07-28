@@ -5,6 +5,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import LoadingSpinner from '../components/LoadingSpinner';
+import Notification from '../components/Notification';
 
 export default function ServiceSelection() {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function ServiceSelection() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
 
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -73,6 +76,11 @@ export default function ServiceSelection() {
       }, 500);
     } else {
       setError('Please log in to access this service.');
+      setNotification({
+        show: true,
+        message: 'Please log in to access this service.',
+        type: 'warning'
+      });
       setTimeout(() => {
         setError('');
         router.push('/login');
@@ -125,10 +133,12 @@ export default function ServiceSelection() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading services...</p>
-        </div>
+        <LoadingSpinner 
+          size="large" 
+          variant="default" 
+          message="Loading services..."
+          showMessage={true}
+        />
       </div>
     );
   }
@@ -136,15 +146,23 @@ export default function ServiceSelection() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        {/* Notification Component */}
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.show}
+          onClose={() => setNotification({ ...notification, show: false })}
+        />
+        
         <motion.header 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16"
         >
-          <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-4 heading-responsive">
             Roadside Assistance Services
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+          <p className="text-gray-600 max-w-2xl mx-auto text-lg text-responsive">
             Choose from our range of professional roadside assistance services
           </p>
         </motion.header>
@@ -161,7 +179,7 @@ export default function ServiceSelection() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="responsive-grid max-w-6xl mx-auto">
           {services.map((service, index) => {
             const isHovered = hoveredService === service.id;
             const styling = getServiceStyling(service.type);
@@ -175,7 +193,7 @@ export default function ServiceSelection() {
                 onHoverStart={() => setHoveredService(service.id)}
                 onHoverEnd={() => setHoveredService(null)}
                 onClick={() => handleServiceSelect(service)}
-                className={`relative rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
+                className={`relative rounded-2xl p-6 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer card-enhanced
                   bg-gradient-to-br ${styling.gradient} hover:shadow-2xl border-2 border-transparent hover:border-${styling.color.split('-')[1]}-500 backdrop-blur-sm backdrop-filter`
                 }
               >

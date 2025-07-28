@@ -5,6 +5,7 @@ import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -138,9 +139,15 @@ function NavBar() {
       </div>
 
       {/* Mobile menu */}
-      <div 
-        className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`} 
+      <motion.div 
+        className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'} mobile-nav-overlay`} 
         id="mobile-menu"
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ 
+          opacity: isMobileMenuOpen ? 1 : 0,
+          height: isMobileMenuOpen ? 'auto' : 0
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
       >
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
           <Link 
@@ -199,7 +206,7 @@ function NavBar() {
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     </nav>
   );
 }

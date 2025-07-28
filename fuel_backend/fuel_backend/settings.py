@@ -140,3 +140,7 @@ AUTHENTICATION_BACKENDS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'  # or os.path.join(BASE_DIR, 'media')
+
+# Razorpay Settings (for development/testing only)
+RAZORPAY_KEY_ID = 'rzp_test_qHVVGRqP506WMd'
+RAZORPAY_KEY_SECRET = '2WHRg2xq8HIZEJAbOQODDN2y'

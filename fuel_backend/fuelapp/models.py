@@ -144,3 +144,26 @@ class AgentRegistrationRequest(models.Model):
 class RejectedAgentEmail(models.Model):
     email = models.EmailField(unique=True)
     rejected_at = models.DateTimeField(auto_now_add=True)
+
+class Payment(models.Model):
+    STATUS_CHOICES = [
+        ('initiated', 'Initiated'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('pending', 'Pending'),
+        ('cod', 'Cash on Delivery'),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='payments')
+    service_request = models.OneToOneField(ServiceRequest, on_delete=models.CASCADE, related_name='payment')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='initiated')
+    payment_id = models.CharField(max_length=100, blank=True, null=True)  # Razorpay payment/order id
+    method = models.CharField(max_length=50, blank=True, null=True)  # e.g., razorpay, cod
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.first_name} - {self.service_request.service.name} - {self.status}"
+
+    class Meta:
+        ordering = ['-created_at']

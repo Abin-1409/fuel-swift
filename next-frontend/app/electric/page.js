@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import RazorpayButton from '../components/RazorpayButton';
+import Notification from '../components/Notification';
 
 export default function ElectricCharging() {
   const router = useRouter();
@@ -14,11 +16,18 @@ export default function ElectricCharging() {
     chargerType: '',
     chargingRequirement: '',
     preferredTime: '',
-    notes: ''
+    notes: '',
+    deliveryTime: ''
   });
   const [error, setError] = useState('');
-  const [availableChargers, setAvailableChargers] = useState(null);
   const [prices, setPrices] = useState({});
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+  const [orderId, setOrderId] = useState(null); // For Razorpay order
+  const [paymentId, setPaymentId] = useState(null); // Our Payment model ID
+  const [realAmount, setRealAmount] = useState(null); // Amount from backend
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch EV charger prices
   useEffect(() => {
@@ -38,16 +47,6 @@ export default function ElectricCharging() {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
               });
-              
-              // Check available chargers
-              try {
-                const response = await fetch('/api/services/electric/chargers');
-                const data = await response.json();
-                setAvailableChargers(data.chargers);
-              } catch (err) {
-                console.error('Error checking chargers:', err);
-                setError('Unable to check available chargers');
-              }
               
               setLoading(false);
             },
@@ -81,6 +80,7 @@ export default function ElectricCharging() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     if (!location) {
       setError('Please enable location services to continue');
@@ -93,27 +93,134 @@ export default function ElectricCharging() {
     }
 
     try {
-      const response = await fetch('/api/services/electric', {
+      const requestData = {
+        service_type: 'ev',
+        user_email: userEmail,
+        vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
+        charger_type: formData.chargerType,
+        charging_requirement: formData.chargingRequirement,
+        preferred_time: formData.preferredTime,
+        notes: formData.notes,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        total_amount: total,
+        delivery_time: formData.deliveryTime
+      };
+      const response = await fetch('http://localhost:8000/api/service-request/create/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          location,
-          serviceType: 'EV Charging'
-        }),
+        body: JSON.stringify(requestData),
       });
-
       if (response.ok) {
-        router.push('/confirmation');
+        const data = await response.json();
+        setPaymentId(data.payment_id);
+        setRealAmount(Number(data.total_amount));
+        setShowPaymentOptions(true);
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to submit request');
+        setNotification({
+          show: true,
+          message: data.message || 'Failed to submit request',
+          type: 'error'
+        });
       }
     } catch (err) {
       setError('An error occurred while submitting your request');
+      setNotification({
+        show: true,
+        message: 'An error occurred while submitting your request',
+        type: 'error'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handlePayLater = async () => {
+    setIsSubmitting(true);
+    try {
+      const requestData = {
+        service_type: 'ev',
+        user_email: userEmail,
+        vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
+        charger_type: formData.chargerType,
+        charging_requirement: formData.chargingRequirement,
+        preferred_time: formData.preferredTime,
+        notes: formData.notes,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        total_amount: total,
+        payment_method: 'cod'
+      };
+      await fetch('http://localhost:8000/api/service-request/create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+    } catch (err) {}
+    setShowPaymentOptions(false);
+    setShowConfirmation(true);
+    setNotification({
+      show: true,
+      message: 'Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
+      type: 'success'
+    });
+    setIsSubmitting(false);
+  };
+
+  const handleRazorpayOpen = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/payment/create-order/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: realAmount })
+      });
+      const data = await res.json();
+      setOrderId(data.order_id);
+    } catch (err) {
+      setNotification({ show: true, message: 'Failed to initiate payment.', type: 'error' });
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleRazorpaySuccess = async (response) => {
+    setIsSubmitting(true);
+    try {
+      await fetch('http://localhost:8000/api/payment/verify/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature,
+          payment_db_id: paymentId
+        })
+      });
+    } catch (err) {}
+    setShowPaymentOptions(false);
+    setShowConfirmation(true);
+    setNotification({
+      show: true,
+      message: 'Payment successful! Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
+      type: 'success'
+    });
+    setIsSubmitting(false);
+  };
+
+  const handleRazorpayFailure = () => {
+    setNotification({
+      show: true,
+      message: 'Payment was not completed.',
+      type: 'error'
+    });
   };
 
   // Calculate total price
@@ -149,6 +256,64 @@ export default function ElectricCharging() {
     );
   }
 
+  if (showPaymentOptions) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4">Choose Payment Option</h2>
+          <p className="mb-6 text-gray-600">How would you like to pay for your service?</p>
+          <button
+            onClick={async () => { await handleRazorpayOpen(); }}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-4"
+            disabled={isSubmitting}
+          >
+            Pay Now (Razorpay)
+          </button>
+          {orderId && (
+            <RazorpayButton
+              amount={realAmount}
+              orderId={orderId}
+              user={{ name: '', email: userEmail || '', phone: '' }}
+              onSuccess={handleRazorpaySuccess}
+              onFailure={handleRazorpayFailure}
+              buttonText="Proceed to Pay"
+            />
+          )}
+          <button
+            onClick={handlePayLater}
+            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            disabled={isSubmitting}
+          >
+            Pay Later (Cash on Delivery)
+          </button>
+        </div>
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.show}
+          onClose={() => setNotification({ ...notification, show: false })}
+        />
+      </div>
+    );
+  }
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold mb-4">Request Submitted</h2>
+          <p className="mb-6 text-gray-600">Request submitted to admin. Admin will assign a mechanic in your area. Please wait.</p>
+        </div>
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.show}
+          onClose={() => setNotification({ ...notification, show: false })}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
@@ -168,11 +333,7 @@ export default function ElectricCharging() {
             </div>
           )}
 
-          {availableChargers !== null && (
-            <div className="mb-6 bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded relative">
-              <span className="block sm:inline">Available mobile chargers in your area: {availableChargers}</span>
-            </div>
-          )}
+          {/* Remove all available chargers logic and UI */}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Location Display */}
@@ -300,6 +461,22 @@ export default function ElectricCharging() {
                 onChange={handleChange}
                 rows="3"
                 placeholder="Any specific instructions or details about your vehicle"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+              />
+            </div>
+
+            {/* Delivery Time */}
+            <div>
+              <label htmlFor="deliveryTime" className="block text-sm font-medium text-gray-700">
+                Preferred Delivery Time *
+              </label>
+              <input
+                type="datetime-local"
+                id="deliveryTime"
+                name="deliveryTime"
+                value={formData.deliveryTime}
+                onChange={handleChange}
+                required
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
               />
             </div>

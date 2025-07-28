@@ -101,7 +101,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-6xl sm:text-8xl font-bold mb-8 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+              className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-8 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 heading-responsive"
             >
               AutoNest
             </motion.h1>
@@ -109,7 +109,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-2xl sm:text-3xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed"
+              className="text-lg sm:text-2xl lg:text-3xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed text-responsive"
             >
               Elevating Your Journey with Roadside Excellence
             </motion.p>
@@ -181,15 +181,15 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mb-20"
           >
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 heading-responsive">
               Premium Services
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto text-responsive">
               Experience excellence in every aspect of our  roadside assistance services.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="responsive-grid">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -199,7 +199,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 onHoverStart={() => setActiveFeature(index)}
                 onHoverEnd={() => setActiveFeature(null)}
-                className={`relative rounded-2xl p-8 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer
+                className={`relative rounded-2xl p-6 sm:p-8 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer card-enhanced
                   ${activeFeature === index ? 'shadow-2xl' : 'shadow-xl'} 
                   bg-gradient-to-br ${feature.gradient} border border-white/20 backdrop-blur-sm`}
               >
