@@ -460,3 +460,111 @@ def verify_razorpay_payment(request):
         return Response({'message': 'Payment signature verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'message': f'Error verifying payment: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def service_requests_list(request):
+    """Get all service requests with user and payment information"""
+    try:
+        requests = ServiceRequest.objects.select_related('user', 'service', 'payment').all().order_by('-created_at')
+        
+        request_data = []
+        for req in requests:
+            request_data.append({
+                'id': req.id,
+                'user_name': f"{req.user.first_name} {req.user.last_name}".strip() if req.user else 'N/A',
+                'user_email': req.user.email if req.user else 'N/A',
+                'user_phone': req.user.phone_number if req.user else 'N/A',
+                'service_type': req.service.type if req.service else 'N/A',
+                'vehicle_type': req.vehicle_type,
+                'vehicle_number': req.vehicle_number,
+                'quantity_liters': req.quantity_liters,
+                'amount_rupees': req.amount_rupees,
+                'total_amount': req.total_amount,
+                'delivery_time': req.delivery_time,
+                'location_lat': req.location_lat,
+                'location_lng': req.location_lng,
+                'notes': req.notes,
+                'status': req.status,
+                'created_at': req.created_at,
+                'updated_at': req.updated_at,
+                'payment_status': req.payment.status if req.payment else 'N/A',
+                'payment_method': req.payment.method if req.payment else 'N/A',
+                'payment_id': req.payment.payment_id if req.payment else None,
+                'assigned_agent': req.assigned_agent.first_name + ' ' + req.assigned_agent.last_name if req.assigned_agent else None,
+            })
+        
+        return Response(request_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_service_request_status(request, request_id):
+    """Update the status of a service request"""
+    try:
+        service_request = ServiceRequest.objects.get(id=request_id)
+        new_status = request.data.get('status')
+        
+        if new_status not in ['pending', 'assigned', 'in_progress', 'completed', 'cancelled']:
+            return Response({'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        service_request.status = new_status
+        service_request.save()
+        
+        return Response({'message': 'Status updated successfully'}, status=status.HTTP_200_OK)
+    except ServiceRequest.DoesNotExist:
+        return Response({'message': 'Service request not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def assign_agent_to_request(request, request_id):
+    """Assign an agent to a service request"""
+    try:
+        service_request = ServiceRequest.objects.get(id=request_id)
+        agent_id = request.data.get('agent_id')
+        
+        if agent_id:
+            try:
+                agent = CustomUser.objects.get(id=agent_id, user_type='agent')
+                service_request.assigned_agent = agent
+                service_request.status = 'assigned'
+            except CustomUser.DoesNotExist:
+                return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            service_request.assigned_agent = None
+            service_request.status = 'pending'
+        
+        service_request.save()
+        
+        return Response({'message': 'Agent assigned successfully'}, status=status.HTTP_200_OK)
+    except ServiceRequest.DoesNotExist:
+        return Response({'message': 'Service request not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def available_agents(request):
+    """Get all available agents for assignment"""
+    try:
+        agents = CustomUser.objects.filter(user_type='agent', is_active=True)
+        agent_data = []
+        for agent in agents:
+            agent_data.append({
+                'id': agent.id,
+                'name': f"{agent.first_name} {agent.last_name}".strip(),
+                'email': agent.email,
+                'phone': agent.phone_number,
+                'active_requests': ServiceRequest.objects.filter(assigned_agent=agent, status__in=['assigned', 'in_progress']).count()
+            })
+        
+        return Response(agent_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

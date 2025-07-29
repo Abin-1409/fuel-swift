@@ -31,6 +31,7 @@ export default function DieselService() {
   const [paymentId, setPaymentId] = useState(null); // Our Payment model ID
   const [realAmount, setRealAmount] = useState(null); // Amount from backend
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   const API_BASE_URL = 'http://localhost:8000';
 
@@ -79,6 +80,12 @@ export default function DieselService() {
     getLocation();
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserEmail((localStorage.getItem('userEmail') || '').trim().toLowerCase());
+    }
+  }, []);
+
   // Calculate total amount when quantity or amount changes
   useEffect(() => {
     if (serviceData && serviceData.price) {
@@ -116,24 +123,12 @@ export default function DieselService() {
       return;
     }
 
-    if (!formData.vehicleType || !formData.vehicleNumber || (!formData.quantityLiters && !formData.amountRupees) || !formData.deliveryTime) {
+    if (!formData.vehicleType || !formData.vehicleNumber || (!formData.quantityLiters && !formData.amountRupees)) {
       setError('Please fill in all required fields');
-      setIsSubmitting(false);
       return;
     }
-
-    if (!serviceData) {
-      setError('Service information not available');
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Get user email from localStorage
-    const userEmail = localStorage.getItem('userEmail');
-    if (!userEmail) {
-      setError('Please log in to continue');
-      setIsSubmitting(false);
-      router.push('/login');
+    if (!formData.deliveryTime) {
+      setError('Please select a preferred delivery time');
       return;
     }
 
@@ -152,9 +147,7 @@ export default function DieselService() {
       };
       const response = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
       });
       if (response.ok) {
@@ -173,11 +166,6 @@ export default function DieselService() {
       }
     } catch (err) {
       setError('An error occurred while submitting your request');
-      setNotification({
-        show: true,
-        message: 'An error occurred while submitting your request',
-        type: 'error'
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -583,4 +571,3 @@ export default function DieselService() {
     </div>
   );
 }
-

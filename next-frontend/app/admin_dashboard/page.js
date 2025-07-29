@@ -282,9 +282,12 @@ export default function AdminDashboard() {
               <div className="text-2xl mb-2">🛡️</div>
               <p className="text-sm font-medium">Registered Agents</p>
             </button>
-            <button className="p-4 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-colors border border-purple-500/30">
-              <div className="text-2xl mb-2">📊</div>
-              <p className="text-sm font-medium">View Reports</p>
+            <button 
+              onClick={() => router.push('/request_management')}
+              className="p-4 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-colors border border-purple-500/30 cursor-pointer"
+            >
+              <div className="text-2xl mb-2">📋</div>
+              <p className="text-sm font-medium">Request Management</p>
             </button>
           </div>
         </motion.div>

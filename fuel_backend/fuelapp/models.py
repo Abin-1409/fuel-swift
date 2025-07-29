@@ -101,6 +101,7 @@ class Service(models.Model):
 class ServiceRequest(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('assigned', 'Assigned'),
         ('confirmed', 'Confirmed'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
@@ -109,6 +110,7 @@ class ServiceRequest(models.Model):
     
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='service_requests')
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='requests')
+    assigned_agent = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_requests')
     vehicle_type = models.CharField(max_length=50)
     vehicle_number = models.CharField(max_length=20)
     quantity_liters = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
@@ -123,7 +125,7 @@ class ServiceRequest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.first_name} - {self.service.name} - {self.status}"
+        return f"Service Request #{self.id} - {self.user.first_name} {self.user.last_name}"
 
     class Meta:
         ordering = ['-created_at']

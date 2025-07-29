@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import RazorpayButton from '../components/RazorpayButton';
 import Notification from '../components/Notification';
 
+const API_BASE_URL = 'http://localhost:8000';
+
 export default function ElectricCharging() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -28,10 +30,11 @@ export default function ElectricCharging() {
   const [paymentId, setPaymentId] = useState(null); // Our Payment model ID
   const [realAmount, setRealAmount] = useState(null); // Amount from backend
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   // Fetch EV charger prices
   useEffect(() => {
-    fetch('http://localhost:8000/api/services/electric/prices/')
+    fetch(`${API_BASE_URL}/api/services/electric/prices/`)
       .then(res => res.json())
       .then(data => setPrices(data));
   }, []);
@@ -69,6 +72,12 @@ export default function ElectricCharging() {
     getLocation();
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserEmail((localStorage.getItem('userEmail') || '').trim().toLowerCase());
+    }
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -91,6 +100,10 @@ export default function ElectricCharging() {
       setError('Please fill in all required fields');
       return;
     }
+    if (!formData.deliveryTime) {
+      setError('Please select a preferred delivery time');
+      return;
+    }
 
     try {
       const requestData = {
@@ -107,11 +120,9 @@ export default function ElectricCharging() {
         total_amount: total,
         delivery_time: formData.deliveryTime
       };
-      const response = await fetch('http://localhost:8000/api/service-request/create/', {
+      const response = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
       });
       if (response.ok) {
@@ -130,11 +141,6 @@ export default function ElectricCharging() {
       }
     } catch (err) {
       setError('An error occurred while submitting your request');
-      setNotification({
-        show: true,
-        message: 'An error occurred while submitting your request',
-        type: 'error'
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -157,7 +163,7 @@ export default function ElectricCharging() {
         total_amount: total,
         payment_method: 'cod'
       };
-      await fetch('http://localhost:8000/api/service-request/create/', {
+      await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -178,7 +184,7 @@ export default function ElectricCharging() {
   const handleRazorpayOpen = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch('http://localhost:8000/api/payment/create-order/', {
+      const res = await fetch(`${API_BASE_URL}/api/payment/create-order/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: realAmount })
@@ -194,7 +200,7 @@ export default function ElectricCharging() {
   const handleRazorpaySuccess = async (response) => {
     setIsSubmitting(true);
     try {
-      await fetch('http://localhost:8000/api/payment/verify/', {
+      await fetch(`${API_BASE_URL}/api/payment/verify/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

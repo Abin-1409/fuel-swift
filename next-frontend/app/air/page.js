@@ -6,12 +6,15 @@ import { motion } from 'framer-motion';
 import RazorpayButton from '../components/RazorpayButton';
 import Notification from '../components/Notification';
 
+const API_BASE_URL = 'http://localhost:8000';
+
 export default function AirService() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [location, setLocation] = useState(null);
   const [formData, setFormData] = useState({
     vehicleType: '',
+    vehicleNumber: '',
     tyreCount: '',
     tyreType: '',
     notes: '',
@@ -27,10 +30,11 @@ export default function AirService() {
   const [paymentId, setPaymentId] = useState(null); // Our Payment model ID
   const [realAmount, setRealAmount] = useState(null); // Amount from backend
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   // Fetch air service prices
   useEffect(() => {
-    fetch('http://localhost:8000/api/services/air/prices/')
+    fetch(`${API_BASE_URL}/api/services/air/prices/`)
       .then(res => res.json())
       .then(data => {
         if (data.price_per_tyre && data.leak_detection_price) {
@@ -69,6 +73,12 @@ export default function AirService() {
     getLocation();
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserEmail((localStorage.getItem('userEmail') || '').trim().toLowerCase());
+    }
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -85,19 +95,26 @@ export default function AirService() {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+
     if (!location) {
       setError('Please enable location services to continue');
       return;
     }
-    if (!formData.vehicleType || !formData.tyreCount || !formData.tyreType) {
+    if (!formData.vehicleType || !formData.vehicleNumber || !formData.tyreCount || !formData.tyreType) {
       setError('Please fill in all required fields');
       return;
     }
+    if (!formData.deliveryTime) {
+      setError('Please select a preferred delivery time');
+      return;
+    }
+
     try {
       const requestData = {
         service_type: 'air',
         user_email: userEmail,
         vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
         tyre_count: formData.tyreCount,
         tyre_type: formData.tyreType,
         notes: formData.notes,
@@ -107,11 +124,9 @@ export default function AirService() {
         total_amount: total,
         delivery_time: formData.deliveryTime
       };
-      const response = await fetch('http://localhost:8000/api/service-request/create/', {
+      const response = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
       });
       if (response.ok) {
@@ -130,11 +145,6 @@ export default function AirService() {
       }
     } catch (err) {
       setError('An error occurred while submitting your request');
-      setNotification({
-        show: true,
-        message: 'An error occurred while submitting your request',
-        type: 'error'
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -147,6 +157,7 @@ export default function AirService() {
         service_type: 'air',
         user_email: userEmail,
         vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
         tyre_count: formData.tyreCount,
         tyre_type: formData.tyreType,
         notes: formData.notes,
@@ -156,7 +167,7 @@ export default function AirService() {
         total_amount: total,
         payment_method: 'cod'
       };
-      await fetch('http://localhost:8000/api/service-request/create/', {
+      await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,7 +188,7 @@ export default function AirService() {
   const handleRazorpayOpen = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch('http://localhost:8000/api/payment/create-order/', {
+      const res = await fetch(`${API_BASE_URL}/api/payment/create-order/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: realAmount })
@@ -193,7 +204,7 @@ export default function AirService() {
   const handleRazorpaySuccess = async (response) => {
     setIsSubmitting(true);
     try {
-      await fetch('http://localhost:8000/api/payment/verify/', {
+      await fetch(`${API_BASE_URL}/api/payment/verify/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -347,6 +358,22 @@ export default function AirService() {
                 <option value="bus">Bus</option>
                 <option value="truck">Truck</option>
               </select>
+            </div>
+            {/* Vehicle Number */}
+            <div>
+              <label htmlFor="vehicleNumber" className="block text-sm font-medium text-gray-700">
+                Vehicle Number *
+              </label>
+              <input
+                type="text"
+                id="vehicleNumber"
+                name="vehicleNumber"
+                value={formData.vehicleNumber}
+                onChange={handleChange}
+                required
+                placeholder="Enter vehicle registration number"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+              />
             </div>
             {/* Number of Tyres */}
             <div>
