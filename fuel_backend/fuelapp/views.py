@@ -573,3 +573,273 @@ def available_agents(request):
         return Response(agent_data, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def agent_assigned_tasks(request):
+    """Get all tasks assigned to a specific agent"""
+    try:
+        agent_email = request.GET.get('email')
+        if not agent_email:
+            return Response({'message': 'Agent email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the agent by email
+        try:
+            agent = CustomUser.objects.get(email=agent_email, user_type='agent')
+        except CustomUser.DoesNotExist:
+            return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get all tasks assigned to this agent
+        assigned_tasks = ServiceRequest.objects.filter(
+            assigned_agent=agent
+        ).select_related('user', 'service', 'payment').order_by('-created_at')
+        
+        tasks_data = []
+        for task in assigned_tasks:
+            tasks_data.append({
+                'id': task.id,
+                'user_name': f"{task.user.first_name} {task.user.last_name}".strip() if task.user else 'N/A',
+                'user_phone': task.user.phone_number if task.user else 'N/A',
+                'service_type': task.service.type if task.service else 'N/A',
+                'service_name': task.service.name if task.service else 'N/A',
+                'vehicle_type': task.vehicle_type,
+                'vehicle_number': task.vehicle_number,
+                'total_amount': task.total_amount,
+                'delivery_time': task.delivery_time,
+                'location_lat': task.location_lat,
+                'location_lng': task.location_lng,
+                'notes': task.notes,
+                'status': task.status,
+                'created_at': task.created_at,
+                'payment_status': task.payment.status if task.payment else 'N/A',
+                'payment_method': task.payment.method if task.payment else 'N/A',
+            })
+        
+        return Response(tasks_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def agent_dashboard_stats(request):
+    """Get dashboard statistics for a specific agent"""
+    try:
+        agent_email = request.GET.get('email')
+        if not agent_email:
+            return Response({'message': 'Agent email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the agent by email
+        try:
+            agent = CustomUser.objects.get(email=agent_email, user_type='agent')
+        except CustomUser.DoesNotExist:
+            return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+        
+        # Get assigned tasks
+        all_assigned_tasks = ServiceRequest.objects.filter(assigned_agent=agent)
+        today_tasks = all_assigned_tasks.filter(created_at__date=today)
+        week_tasks = all_assigned_tasks.filter(created_at__date__gte=week_ago)
+        month_tasks = all_assigned_tasks.filter(created_at__date__gte=month_ago)
+        
+        # Calculate statistics
+        stats = {
+            'today_requests': today_tasks.count(),
+            'ongoing_tasks': all_assigned_tasks.filter(status__in=['assigned', 'in_progress']).count(),
+            'completed_tasks': all_assigned_tasks.filter(status='completed').count(),
+            'total_requests': all_assigned_tasks.count(),
+            'earnings': {
+                'today': float(today_tasks.aggregate(total=models.Sum('total_amount'))['total'] or 0),
+                'week': float(week_tasks.aggregate(total=models.Sum('total_amount'))['total'] or 0),
+                'month': float(month_tasks.aggregate(total=models.Sum('total_amount'))['total'] or 0)
+            },
+            'service_breakdown': {
+                'petrol': all_assigned_tasks.filter(service__type='petrol').count(),
+                'diesel': all_assigned_tasks.filter(service__type='diesel').count(),
+                'ev': all_assigned_tasks.filter(service__type='ev').count(),
+                'air': all_assigned_tasks.filter(service__type='air').count(),
+                'mechanical': all_assigned_tasks.filter(service__type='mechanical').count()
+            },
+            'response_time': {
+                'average': 12,  # Mock data - can be calculated based on actual response times
+                'best': 8
+            }
+        }
+        
+        return Response(stats, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def agent_update_task_status(request, task_id):
+    """Allow agent to update the status of their assigned task"""
+    try:
+        agent_email = request.data.get('agent_email')
+        new_status = request.data.get('status')
+        
+        if not agent_email or not new_status:
+            return Response({'message': 'Agent email and status are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the agent
+        try:
+            agent = CustomUser.objects.get(email=agent_email, user_type='agent')
+        except CustomUser.DoesNotExist:
+            return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Find the task assigned to this agent
+        try:
+            task = ServiceRequest.objects.get(id=task_id, assigned_agent=agent)
+        except ServiceRequest.DoesNotExist:
+            return Response({'message': 'Task not found or not assigned to you'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if new_status not in ['assigned', 'in_progress', 'completed', 'cancelled']:
+            return Response({'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        task.status = new_status
+        task.save()
+        
+        return Response({'message': 'Task status updated successfully'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def agent_assigned_tasks(request):
+    """Get all tasks assigned to a specific agent"""
+    try:
+        agent_email = request.GET.get('email')
+        if not agent_email:
+            return Response({'message': 'Agent email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the agent by email
+        try:
+            agent = CustomUser.objects.get(email=agent_email, user_type='agent')
+        except CustomUser.DoesNotExist:
+            return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get all tasks assigned to this agent
+        assigned_tasks = ServiceRequest.objects.filter(
+            assigned_agent=agent
+        ).select_related('user', 'service', 'payment').order_by('-created_at')
+        
+        tasks_data = []
+        for task in assigned_tasks:
+            tasks_data.append({
+                'id': task.id,
+                'user_name': f"{task.user.first_name} {task.user.last_name}".strip() if task.user else 'N/A',
+                'user_phone': task.user.phone_number if task.user else 'N/A',
+                'service_type': task.service.type if task.service else 'N/A',
+                'service_name': task.service.name if task.service else 'N/A',
+                'vehicle_type': task.vehicle_type,
+                'vehicle_number': task.vehicle_number,
+                'total_amount': task.total_amount,
+                'delivery_time': task.delivery_time,
+                'location_lat': task.location_lat,
+                'location_lng': task.location_lng,
+                'notes': task.notes,
+                'status': task.status,
+                'created_at': task.created_at,
+                'payment_status': task.payment.status if task.payment else 'N/A',
+                'payment_method': task.payment.method if task.payment else 'N/A',
+            })
+        
+        return Response(tasks_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def agent_dashboard_stats(request):
+    """Get dashboard statistics for a specific agent"""
+    try:
+        agent_email = request.GET.get('email')
+        if not agent_email:
+            return Response({'message': 'Agent email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the agent by email
+        try:
+            agent = CustomUser.objects.get(email=agent_email, user_type='agent')
+        except CustomUser.DoesNotExist:
+            return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+        
+        # Get assigned tasks
+        all_assigned_tasks = ServiceRequest.objects.filter(assigned_agent=agent)
+        today_tasks = all_assigned_tasks.filter(created_at__date=today)
+        week_tasks = all_assigned_tasks.filter(created_at__date__gte=week_ago)
+        month_tasks = all_assigned_tasks.filter(created_at__date__gte=month_ago)
+        
+        # Calculate statistics
+        stats = {
+            'today_requests': today_tasks.count(),
+            'ongoing_tasks': all_assigned_tasks.filter(status__in=['assigned', 'in_progress']).count(),
+            'completed_tasks': all_assigned_tasks.filter(status='completed').count(),
+            'total_requests': all_assigned_tasks.count(),
+            'earnings': {
+                'today': float(today_tasks.aggregate(total=models.Sum('total_amount'))['total'] or 0),
+                'week': float(week_tasks.aggregate(total=models.Sum('total_amount'))['total'] or 0),
+                'month': float(month_tasks.aggregate(total=models.Sum('total_amount'))['total'] or 0)
+            },
+            'service_breakdown': {
+                'petrol': all_assigned_tasks.filter(service__type='petrol').count(),
+                'diesel': all_assigned_tasks.filter(service__type='diesel').count(),
+                'ev': all_assigned_tasks.filter(service__type='ev').count(),
+                'air': all_assigned_tasks.filter(service__type='air').count(),
+                'mechanical': all_assigned_tasks.filter(service__type='mechanical').count()
+            },
+            'response_time': {
+                'average': 12,  # Mock data - can be calculated based on actual response times
+                'best': 8
+            }
+        }
+        
+        return Response(stats, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def agent_update_task_status(request, task_id):
+    """Allow agent to update the status of their assigned task"""
+    try:
+        agent_email = request.data.get('agent_email')
+        new_status = request.data.get('status')
+        
+        if not agent_email or not new_status:
+            return Response({'message': 'Agent email and status are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the agent
+        try:
+            agent = CustomUser.objects.get(email=agent_email, user_type='agent')
+        except CustomUser.DoesNotExist:
+            return Response({'message': 'Agent not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Find the task assigned to this agent
+        try:
+            task = ServiceRequest.objects.get(id=task_id, assigned_agent=agent)
+        except ServiceRequest.DoesNotExist:
+            return Response({'message': 'Task not found or not assigned to you'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if new_status not in ['assigned', 'in_progress', 'completed', 'cancelled']:
+            return Response({'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        task.status = new_status
+        task.save()
+        
+        return Response({'message': 'Task status updated successfully'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
