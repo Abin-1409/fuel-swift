@@ -13,9 +13,12 @@ export default function RequestManagement() {
   const [filterService, setFilterService] = useState('all');
   const [filterPayment, setFilterPayment] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [agents, setAgents] = useState([]);
+  const [assigningAgent, setAssigningAgent] = useState(null);
 
   useEffect(() => {
     fetchRequests();
+    fetchAgents();
   }, []);
 
   const fetchRequests = async () => {
@@ -33,6 +36,18 @@ export default function RequestManagement() {
       setError('Failed to fetch service requests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/available-agents/');
+      if (response.ok) {
+        const data = await response.json();
+        setAgents(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch agents:', err);
     }
   };
 
@@ -54,19 +69,26 @@ export default function RequestManagement() {
   };
 
   const handleAssignAgent = async (requestId, agentId) => {
+    if (!agentId) return;
+    
     try {
+      setAssigningAgent(requestId);
       const response = await fetch(`http://localhost:8000/api/service-requests/${requestId}/assign-agent/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: agentId })
       });
+      
       if (response.ok) {
-        fetchRequests(); // Refresh the list
+        await fetchRequests();
       } else {
-        setError('Failed to assign agent');
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to assign agent');
       }
     } catch (err) {
       setError('Failed to assign agent');
+    } finally {
+      setAssigningAgent(null);
     }
   };
 
@@ -259,6 +281,9 @@ export default function RequestManagement() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Agent
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -323,12 +348,47 @@ export default function RequestManagement() {
                           <option value="completed">Completed</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
-                        <button
-                          onClick={() => handleAssignAgent(request.id, null)}
-                          className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                          Assign
-                        </button>
+                        <div className="relative">
+                          <select
+                            value=""
+                            onChange={(e) => handleAssignAgent(request.id, e.target.value)}
+                            disabled={assigningAgent === request.id}
+                            className="appearance-none bg-white border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 pr-6"
+                          >
+                            <option value="">Assign Agent</option>
+                            {agents.map((agent) => (
+                              <option key={agent.id} value={agent.id}>
+                                {agent.name} ({agent.phone || 'No contact'})
+                              </option>
+                            ))}
+                          </select>
+                          {assigningAgent === request.id && (
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {request.assigned_agent ? (
+                          <div className="flex items-center">
+                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                              {request.assigned_agent?.name?.charAt(0) || 'A'}
+                            </div>
+                            <div className="ml-2">
+                              <div className="text-sm font-medium text-gray-900">
+                                {request.assigned_agent?.name || 'Agent'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {request.assigned_agent?.phone || 'No contact'}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-500">Not assigned</span>
+                        )}
                       </div>
                     </td>
                   </motion.tr>

@@ -492,7 +492,12 @@ def service_requests_list(request):
                 'payment_status': req.payment.status if req.payment else 'N/A',
                 'payment_method': req.payment.method if req.payment else 'N/A',
                 'payment_id': req.payment.payment_id if req.payment else None,
-                'assigned_agent': req.assigned_agent.first_name + ' ' + req.assigned_agent.last_name if req.assigned_agent else None,
+                'assigned_agent': {
+                    'id': req.assigned_agent.id if req.assigned_agent else None,
+                    'name': f"{req.assigned_agent.first_name} {req.assigned_agent.last_name}".strip() if req.assigned_agent else None,
+                    'phone': req.assigned_agent.phone_number if req.assigned_agent else None,
+                    'email': req.assigned_agent.email if req.assigned_agent else None
+                } if req.assigned_agent else None,
             })
         
         return Response(request_data, status=status.HTTP_200_OK)
