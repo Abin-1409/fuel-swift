@@ -14,11 +14,13 @@ function NavBar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [firstName, setFirstName] = useState('');
+  const [userType, setUserType] = useState("");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
       setFirstName(localStorage.getItem('firstName') || '');
+      setUserType(localStorage.getItem('userType') || '');
     }
   }, [pathname]);
 
@@ -97,7 +99,23 @@ function NavBar() {
                   </Link>
                 </>
               )}
-              {isLoggedIn && (
+              {isLoggedIn && userType === 'user' && (
+                <>
+                  <Link 
+                    href="/my_account" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/my_account')}`}
+                  >
+                    My Account
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </>
+              )}
+              {isLoggedIn && userType !== 'user' && (
                 <button
                   onClick={handleLogout}
                   className="px-3 py-2 rounded-md text-sm font-medium bg-red-500 hover:bg-red-600 transition-colors"
@@ -197,7 +215,24 @@ function NavBar() {
               </Link>
             </>
           )}
-          {isLoggedIn && (
+          {isLoggedIn && userType === 'user' && (
+            <>
+              <Link 
+                href="/my_account" 
+                className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/my_account')}`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                My Account
+              </Link>
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                Logout
+              </button>
+            </>
+          )}
+          {isLoggedIn && userType !== 'user' && (
             <button
               onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
               className="block w-full text-left px-3 py-2 rounded-md text-base font-medium bg-red-500 hover:bg-red-600 transition-colors"
