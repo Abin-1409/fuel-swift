@@ -11,6 +11,7 @@ export default function AgentDashboard() {
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [taskErrors, setTaskErrors] = useState({});
   const [agentEmail, setAgentEmail] = useState('');
   const [stats, setStats] = useState({
     todayRequests: 0,
@@ -74,6 +75,9 @@ export default function AgentDashboard() {
 
   const fetchAssignedTasks = async (email) => {
     try {
+      // Clear task-specific errors when refreshing tasks
+      setTaskErrors({});
+      
       const response = await fetch(`http://localhost:8000/api/agent/assigned-tasks/?email=${email}`);
       if (response.ok) {
         const data = await response.json();
@@ -103,6 +107,9 @@ export default function AgentDashboard() {
 
   const handleStatusUpdate = async (taskId, newStatus) => {
     try {
+      // Clear any previous errors for this task
+      setTaskErrors(prev => ({ ...prev, [taskId]: null }));
+      
       const response = await fetch(`http://localhost:8000/api/agent/tasks/${taskId}/update-status/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -118,10 +125,18 @@ export default function AgentDashboard() {
         await fetchDashboardData(agentEmail);
       } else {
         const errorData = await response.json();
-        setError(errorData.message || 'Failed to update task status');
+        // Set error specific to this task
+        setTaskErrors(prev => ({
+          ...prev,
+          [taskId]: errorData.message || 'Failed to update task status'
+        }));
       }
     } catch (err) {
-      setError('Failed to update task status');
+      // Set error specific to this task
+      setTaskErrors(prev => ({
+        ...prev,
+        [taskId]: 'Failed to update task status'
+      }));
     }
   };
 
@@ -375,23 +390,35 @@ export default function AgentDashboard() {
                         </div>
                       </div>
                       
-                      <div className="mt-4 flex justify-between items-center">
-                        <div className="text-xs text-gray-500">
-                          Assigned: {new Date(task.created_at).toLocaleDateString()}
+                      <div className="mt-4 flex flex-col space-y-2">
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs text-gray-500">
+                            Assigned: {new Date(task.created_at).toLocaleDateString()}
+                          </div>
+                          
+                          <div className="flex space-x-2">
+                            {task.status === 'cancelled' ? (
+                              <span className="text-xs text-red-500 italic">Request cancelled - cannot update</span>
+                            ) : (
+                              <select
+                                value={task.status || 'pending'}
+                                onChange={(e) => handleStatusUpdate(task.id, e.target.value)}
+                                className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              >
+                                <option value="assigned">Assigned</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            )}
+                          </div>
                         </div>
                         
-                        <div className="flex space-x-2">
-                          <select
-                            value={task.status || 'pending'}
-                            onChange={(e) => handleStatusUpdate(task.id, e.target.value)}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="assigned">Assigned</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </div>
+                        {taskErrors[task.id] && (
+                          <div className="text-xs text-red-500 bg-red-50 p-2 rounded-md">
+                            Error: {taskErrors[task.id]}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   ))}

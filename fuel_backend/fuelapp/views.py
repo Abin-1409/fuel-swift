@@ -516,6 +516,10 @@ def update_service_request_status(request, request_id):
         if new_status not in ['pending', 'assigned', 'in_progress', 'completed', 'cancelled']:
             return Response({'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
         
+        # If the request is already cancelled, don't allow status changes
+        if service_request.status == 'cancelled' and new_status != 'cancelled':
+            return Response({'message': 'Cannot change status of a cancelled request'}, status=status.HTTP_400_BAD_REQUEST)
+        
         service_request.status = new_status
         service_request.save()
         
@@ -537,6 +541,11 @@ def assign_agent_to_request(request, request_id):
     """Assign an agent to a service request"""
     try:
         service_request = ServiceRequest.objects.get(id=request_id)
+        
+        # Check if the request is cancelled - cannot assign agent to cancelled requests
+        if service_request.status == 'cancelled':
+            return Response({'message': 'Cannot assign agent to a cancelled request'}, status=status.HTTP_400_BAD_REQUEST)
+            
         agent_id = request.data.get('agent_id')
         
         if agent_id:
@@ -708,6 +717,10 @@ def agent_update_task_status(request, task_id):
             task = ServiceRequest.objects.get(id=task_id, assigned_agent=agent)
         except ServiceRequest.DoesNotExist:
             return Response({'message': 'Task not found or not assigned to you'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if the request is already cancelled - cannot update cancelled requests
+        if task.status == 'cancelled':
+            return Response({'message': 'Cannot update a cancelled request'}, status=status.HTTP_400_BAD_REQUEST)
         
         if new_status not in ['assigned', 'in_progress', 'completed', 'cancelled']:
             return Response({'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
