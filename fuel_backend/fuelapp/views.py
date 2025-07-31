@@ -519,7 +519,12 @@ def update_service_request_status(request, request_id):
         service_request.status = new_status
         service_request.save()
         
-        return Response({'message': 'Status updated successfully'}, status=status.HTTP_200_OK)
+        # Return the updated service request data along with the success message
+        serializer = ServiceRequestSerializer(service_request)
+        return Response({
+            'message': 'Status updated successfully',
+            'request': serializer.data
+        }, status=status.HTTP_200_OK)
     except ServiceRequest.DoesNotExist:
         return Response({'message': 'Service request not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -547,7 +552,12 @@ def assign_agent_to_request(request, request_id):
         
         service_request.save()
         
-        return Response({'message': 'Agent assigned successfully'}, status=status.HTTP_200_OK)
+        # Return the updated service request data along with the success message
+        serializer = ServiceRequestSerializer(service_request)
+        return Response({
+            'message': 'Agent assigned successfully',
+            'request': serializer.data
+        }, status=status.HTTP_200_OK)
     except ServiceRequest.DoesNotExist:
         return Response({'message': 'Service request not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -705,7 +715,12 @@ def agent_update_task_status(request, task_id):
         task.status = new_status
         task.save()
         
-        return Response({'message': 'Task status updated successfully'}, status=status.HTTP_200_OK)
+        # Return the updated task data along with the success message
+        serializer = ServiceRequestSerializer(task)
+        return Response({
+            'message': 'Task status updated successfully',
+            'request': serializer.data
+        }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

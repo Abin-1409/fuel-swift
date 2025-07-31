@@ -113,9 +113,22 @@ export default function MyAccountPage() {
         body: JSON.stringify({ status: "cancelled" }),
       });
       if (!res.ok) throw new Error("Failed to cancel booking");
-      // Refresh bookings
-      const updated = bookings.map(b => b.id === bookingId ? { ...b, status: "cancelled" } : b);
-      setBookings(updated);
+      
+      // Get the updated request from the response
+      const data = await res.json();
+      if (data.request) {
+        // Update the specific booking with the returned data
+        const updated = bookings.map(b => b.id === bookingId ? {
+          ...b,
+          status: data.request.status,
+          assigned_agent: data.request.assigned_agent
+        } : b);
+        setBookings(updated);
+      } else {
+        // Fallback to the old method if the response format is different
+        const updated = bookings.map(b => b.id === bookingId ? { ...b, status: "cancelled" } : b);
+        setBookings(updated);
+      }
     } catch (err) {
       setBookingError(err.message);
     } finally {
