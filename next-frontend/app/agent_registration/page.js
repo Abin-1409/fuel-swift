@@ -18,6 +18,7 @@ export default function AgentRegistration() {
   const [statusEmail, setStatusEmail] = useState("");
   const [statusResult, setStatusResult] = useState("");
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -150,7 +151,23 @@ export default function AgentRegistration() {
           </div>
           <div>
             <label className="block text-sm font-medium text-blue-900 mb-1">Password</label>
-            <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400" required />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
+                value={form.password} 
+                onChange={handleChange} 
+                className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400" 
+                required 
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-blue-700 cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <span className="text-xl">{showPassword ? "👁️‍🗨️" : "👁️"}</span>
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-blue-900 mb-1">ID Proof Type</label>
