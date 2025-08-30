@@ -68,6 +68,7 @@ class Service(models.Model):
     stock = models.IntegerField(default=0)
     unit = models.CharField(max_length=20)  # liters, stations, pumps, mechanics
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     price_per_tyre = models.DecimalField(max_digits=10, decimal_places=2, default=10)
     leak_detection_price = models.DecimalField(max_digits=10, decimal_places=2, default=20)
     # EV Charging prices

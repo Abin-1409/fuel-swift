@@ -15,6 +15,7 @@ export default function ServiceManagement() {
     stock: 0,
     unit: '',
     price: 0,
+    service_charge: 0,
     status: 'active',
     currency: 'INR'
   });
@@ -166,6 +167,7 @@ export default function ServiceManagement() {
         description: newService.description || getDefaultDescription(newService.type),
         stock: needsStockField(newService.type) ? (newService.stock || getDefaultStock(newService.type)) : 0,
         price: newService.price || getDefaultPrice(newService.type),
+        service_charge: newService.service_charge || 0,
         ...(newService.type === 'air' ? {
           price_per_tyre: newService.price_per_tyre,
           leak_detection_price: newService.leak_detection_price
@@ -211,6 +213,7 @@ export default function ServiceManagement() {
         stock: 0,
         unit: '',
         price: 0,
+        service_charge: 0,
         status: 'active',
         currency: 'INR'
       });
@@ -359,6 +362,14 @@ export default function ServiceManagement() {
                 placeholder={getPriceLabel(newService.type) || "Price (₹)"}
                 value={newService.price}
                 onChange={(e) => setNewService({...newService, price: parseFloat(e.target.value)})}
+                className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
+              />
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Service Charge (₹)"
+                value={newService.service_charge}
+                onChange={(e) => setNewService({...newService, service_charge: parseFloat(e.target.value)})}
                 className="p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400"
               />
               {newService.type === 'air' && (
@@ -518,6 +529,10 @@ export default function ServiceManagement() {
                       <p className="text-white font-bold">₹{service.price} {service.currency}</p>
                     </div>
                     <div className="bg-gray-800/50 rounded-lg p-3">
+                      <p className="text-gray-400 text-sm">Service Charge</p>
+                      <p className="text-white font-bold">₹{service.service_charge || 0} {service.currency}</p>
+                    </div>
+                    <div className="bg-gray-800/50 rounded-lg p-3">
                       <p className="text-gray-400 text-sm">Type</p>
                       <p className="text-white font-bold capitalize">{service.type}</p>
                     </div>
@@ -589,6 +604,14 @@ function ServiceEditForm({ service, onSave, onCancel, getStockLabel, getPriceLab
           placeholder={getPriceLabel(editedService.type)}
           value={editedService.price}
           onChange={(e) => setEditedService({...editedService, price: parseFloat(e.target.value)})}
+          className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
+        />
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Service Charge (₹)"
+          value={editedService.service_charge || ''}
+          onChange={(e) => setEditedService({...editedService, service_charge: parseFloat(e.target.value)})}
           className="p-2 bg-gray-800 border border-gray-600 rounded-lg text-white"
         />
         <select

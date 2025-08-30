@@ -23,12 +23,14 @@ export default function DieselService() {
   });
   const [error, setError] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
+  const [serviceCharge, setServiceCharge] = useState(0);
   const [lastModifiedField, setLastModifiedField] = useState(null); // Track which field was last modified
   const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [orderId, setOrderId] = useState(null); // For Razorpay order
   const [paymentId, setPaymentId] = useState(null); // Our Payment model ID
+  const [serviceRequestId, setServiceRequestId] = useState(null); // Service Request ID
   const [realAmount, setRealAmount] = useState(null); // Amount from backend
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userEmail, setUserEmail] = useState('');
@@ -53,6 +55,7 @@ export default function DieselService() {
                 if (response.ok) {
                   const data = await response.json();
                   setServiceData(data);
+                  setServiceCharge(data.service_charge || 0);
                 }
               } catch (err) {
                 console.error('Error fetching service data:', err);
@@ -153,6 +156,7 @@ export default function DieselService() {
       if (response.ok) {
         const data = await response.json();
         setPaymentId(data.payment_id);
+        setServiceRequestId(data.request.id);
         setRealAmount(Number(data.total_amount));
         setShowPaymentOptions(true);
       } else {
@@ -172,29 +176,19 @@ export default function DieselService() {
   };
 
   const handlePayLater = async () => {
+    // Update payment status to COD for existing service request
     setIsSubmitting(true);
     try {
-      const requestData = {
-        service_type: 'diesel',
-        user_email: userEmail,
-        vehicle_type: formData.vehicleType,
-        vehicle_number: formData.vehicleNumber,
-        quantity_liters: formData.quantityLiters || null,
-        amount_rupees: formData.amountRupees || null,
-        delivery_time: formData.deliveryTime,
-        location_lat: location.lat,
-        location_lng: location.lng,
-        notes: formData.notes,
-        payment_method: 'cod'
-      };
-      await fetch(`${API_BASE_URL}/api/service-request/create/`, {
-        method: 'POST',
+      await fetch(`${API_BASE_URL}/api/payment/${paymentId}/update-status/`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({ status: 'cod' }),
       });
-    } catch (err) {}
+    } catch (err) {
+      console.error('Error updating payment status:', err);
+    }
     setShowPaymentOptions(false);
     setShowConfirmation(true);
     setNotification({
@@ -504,11 +498,23 @@ export default function DieselService() {
             {/* Total Amount Display */}
             {totalAmount > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-blue-800">Total Amount:</span>
-                  <span className="text-lg font-bold text-blue-900">₹{totalAmount.toFixed(2)}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-blue-800">Base Amount:</span>
+                    <span className="font-medium">₹{totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-blue-800">Service Charge:</span>
+                    <span className="font-medium">₹{serviceCharge}</span>
+                  </div>
+                  <div className="border-t border-blue-200 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-blue-900">Total Amount:</span>
+                      <span className="text-lg font-bold text-blue-900">₹{(parseFloat(totalAmount) + parseFloat(serviceCharge)).toFixed(2)}</span>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-blue-600 mt-2">
                   {formData.quantityLiters && `${formData.quantityLiters} liters`}
                   {formData.amountRupees && !formData.quantityLiters && `${(parseFloat(formData.amountRupees) / serviceData?.price).toFixed(2)} liters`}
                 </p>

@@ -95,7 +95,7 @@ function NavBar() {
                     className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-purple-600 via-blue-500 to-blue-400 text-white shadow-lg border-2 border-white/20 hover:from-purple-700 hover:to-blue-600 transition-all duration-200 scale-105 hover:scale-110"
                   >
                     <span className="inline-block text-lg">🛡️</span>
-                    <span>Agent Register</span>
+                    <span>Mechanic Register</span>
                   </Link>
                 </>
               )}
@@ -211,7 +211,7 @@ function NavBar() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <span className="inline-block text-lg">🛡️</span>
-                <span>Agent Register</span>
+                <span>Mechanic Register</span>
               </Link>
             </>
           )}

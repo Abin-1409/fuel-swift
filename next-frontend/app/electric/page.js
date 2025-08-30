@@ -248,7 +248,8 @@ export default function ElectricCharging() {
       default: return 0;
     }
   };
-  const total = getBasePrice() * getMultiplier();
+  const basePrice = getBasePrice() * getMultiplier();
+  const total = basePrice + (prices.service_charge || 0);
 
   if (loading) {
     return (
@@ -487,9 +488,24 @@ export default function ElectricCharging() {
               />
             </div>
 
-            {/* Total Price Display */}
-            <div className="mt-4 text-lg font-bold text-green-700">
-              Total: ₹{total}
+            {/* Price Breakdown */}
+            <div className="mt-4 space-y-2">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Base Price:</span>
+                  <span className="font-medium">₹{basePrice}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <span className="text-gray-600">Service Charge:</span>
+                  <span className="font-medium">₹{prices.service_charge || 0}</span>
+                </div>
+                <div className="border-t border-gray-200 mt-2 pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-900">Total:</span>
+                    <span className="text-lg font-bold text-green-700">₹{total}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="pt-4">

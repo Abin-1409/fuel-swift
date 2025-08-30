@@ -7,9 +7,7 @@ export default function MyAccountPage() {
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [profile, setProfile] = useState({ first_name: "", last_name: "", phone_number: "" });
-  const [profileEdit, setProfileEdit] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [bookingError, setBookingError] = useState("");
   const [cancelingId, setCancelingId] = useState(null);
@@ -72,35 +70,7 @@ export default function MyAccountPage() {
     if (userEmail) fetchProfile();
   }, [userEmail]);
 
-  // Handle profile edit
-  const handleProfileChange = e => {
-    const { name, value } = e.target;
-    setProfile(prev => ({ ...prev, [name]: value }));
-  };
 
-  const handleProfileSave = async () => {
-    setProfileSaving(true);
-    setProfileError("");
-    try {
-      // Get user id
-      const resUsers = await fetch("http://localhost:8000/api/users/");
-      if (!resUsers.ok) throw new Error("Failed to fetch user id");
-      const users = await resUsers.json();
-      const user = users.find(u => u.email === userEmail);
-      if (!user) throw new Error("User not found");
-      const res = await fetch(`http://localhost:8000/api/users/${user.id}/`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
-      });
-      if (!res.ok) throw new Error("Failed to update profile");
-      setProfileEdit(false);
-    } catch (err) {
-      setProfileError(err.message);
-    } finally {
-      setProfileSaving(false);
-    }
-  };
 
   // Handle booking cancel
   const handleCancel = async (bookingId) => {
@@ -190,60 +160,7 @@ export default function MyAccountPage() {
                   <div className="font-semibold text-blue-900">{profile.first_name} {profile.last_name}</div>
                   <div className="text-sm text-gray-700">Phone: {profile.phone_number}</div>
                 </div>
-                <div className="flex-1"></div>
-                <div>
-                  {!profileEdit ? (
-                    <button className="px-4 py-2 rounded-md bg-blue-500 text-white font-semibold" onClick={() => setProfileEdit(true)}>
-                      Edit
-                    </button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button
-                        className="px-4 py-2 rounded-md bg-green-500 text-white font-semibold"
-                        onClick={handleProfileSave}
-                        disabled={profileSaving}
-                      >
-                        {profileSaving ? "Saving..." : "Save"}
-                      </button>
-                      <button
-                        className="px-4 py-2 rounded-md bg-gray-300 text-gray-800 font-semibold"
-                        onClick={() => setProfileEdit(false)}
-                        disabled={profileSaving}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
-              {profileEdit && (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    name="first_name"
-                    value={profile.first_name}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border rounded-md"
-                    placeholder="First Name"
-                  />
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={profile.last_name}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border rounded-md"
-                    placeholder="Last Name"
-                  />
-                  <input
-                    type="text"
-                    name="phone_number"
-                    value={profile.phone_number}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border rounded-md"
-                    placeholder="Phone Number"
-                  />
-                </div>
-              )}
             </div>
           )}
         </section>

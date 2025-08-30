@@ -172,7 +172,7 @@ export default function AgentDashboard() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading agent dashboard...</p>
+          <p className="mt-4 text-gray-600">Loading station dashboard...</p>
         </div>
       </div>
     );
@@ -201,7 +201,7 @@ export default function AgentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Agent Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Station Dashboard</h1>
               <p className="text-sm text-gray-500">Welcome back, {agentEmail}</p>
             </div>
             <div className="flex items-center space-x-4">

@@ -22,7 +22,7 @@ export default function AirService() {
   });
   const [leakDetectionEnabled, setLeakDetectionEnabled] = useState(false);
   const [error, setError] = useState('');
-  const [prices, setPrices] = useState({ price_per_tyre: 10, leak_detection_price: 20 });
+  const [prices, setPrices] = useState({ price_per_tyre: 10, leak_detection_price: 20, service_charge: 0 });
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
@@ -89,7 +89,8 @@ export default function AirService() {
 
   // Calculate total price
   const tyreCount = parseInt(formData.tyreCount) || 0;
-  const total = (prices.price_per_tyre * tyreCount) + (leakDetectionEnabled ? prices.leak_detection_price : 0);
+  const basePrice = (prices.price_per_tyre * tyreCount) + (leakDetectionEnabled ? prices.leak_detection_price : 0);
+  const total = basePrice + prices.service_charge;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -458,9 +459,24 @@ export default function AirService() {
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
               />
             </div>
-            {/* Total Price Display */}
-            <div className="mt-4 text-lg font-bold text-blue-700">
-              Total: ₹{total}
+            {/* Price Breakdown */}
+            <div className="mt-4 space-y-2">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Base Price:</span>
+                  <span className="font-medium">₹{basePrice}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <span className="text-gray-600">Service Charge:</span>
+                  <span className="font-medium">₹{prices.service_charge}</span>
+                </div>
+                <div className="border-t border-gray-200 mt-2 pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-900">Total:</span>
+                    <span className="text-lg font-bold text-blue-700">₹{total}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="pt-4">
               <button

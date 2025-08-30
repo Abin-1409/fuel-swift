@@ -210,26 +210,16 @@ export default function ServiceSelection() {
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">₹{service.price}</p>
-                        <p className="text-sm text-gray-600">
-                          {service.type === 'petrol' || service.type === 'diesel' ? 'per liter' :
-                           service.type === 'ev' ? 'per session' :
-                           service.type === 'air' ? 'per service' :
-                           service.type === 'mechanical' ? 'per hour' : 'per service'}
-                        </p>
-                      </div>
                     </div>
                     <p className="text-gray-600 mt-1 text-sm">{service.description}</p>
                     
-                    {/* Show stock for fuel services */}
-                    {(service.type === 'petrol' || service.type === 'diesel') && service.stock > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm text-green-600 font-medium">
-                          Available: {service.stock} {service.unit}
-                        </p>
+                    {/* Service Charge Display */}
+                    <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-blue-800">Service Charge:</span>
+                        <span className="text-sm font-bold text-blue-900">₹{service.service_charge || 0}</span>
                       </div>
-                    )}
+                    </div>
 
                     <AnimatePresence>
                       {isHovered && (

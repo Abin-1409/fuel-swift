@@ -173,8 +173,10 @@ def create_service_request(request):
                 total_amount = amount_rupees
             else:
                 return Response({'message': 'Either quantity_liters or amount_rupees must be provided'}, status=status.HTTP_400_BAD_REQUEST)
+            # Add service charge to fuel services
+            total_amount += service.service_charge
         else:
-            # For non-fuel services, use total_amount from frontend
+            # For non-fuel services, use total_amount from frontend (which already includes service charge)
             total_amount = Decimal(data.get('total_amount', 0))
         
         # Check stock for fuel services
@@ -264,7 +266,8 @@ def air_service_prices(request):
         air_service = Service.objects.get(type='air')
         return Response({
             'price_per_tyre': float(air_service.price_per_tyre),
-            'leak_detection_price': float(air_service.leak_detection_price)
+            'leak_detection_price': float(air_service.leak_detection_price),
+            'service_charge': float(air_service.service_charge)
         })
     except Service.DoesNotExist:
         return Response({'error': 'Air service not found'}, status=404)
@@ -278,7 +281,8 @@ def electric_service_prices(request):
             'price_type2': float(ev_service.price_type2),
             'price_ccs': float(ev_service.price_ccs),
             'price_chademo': float(ev_service.price_chademo),
-            'price_bharat_dc': float(ev_service.price_bharat_dc)
+            'price_bharat_dc': float(ev_service.price_bharat_dc),
+            'service_charge': float(ev_service.service_charge)
         })
     except Service.DoesNotExist:
         return Response({'error': 'EV service not found'}, status=404)
@@ -297,7 +301,8 @@ def mechanical_service_prices(request):
             'price_electrical': float(mech_service.price_electrical),
             'price_fluid_leak': float(mech_service.price_fluid_leak),
             'price_chain_belt': float(mech_service.price_chain_belt),
-            'price_key_lockout': float(mech_service.price_key_lockout)
+            'price_key_lockout': float(mech_service.price_key_lockout),
+            'service_charge': float(mech_service.service_charge)
         })
     except Service.DoesNotExist:
         return Response({'error': 'Mechanical service not found'}, status=404)
@@ -869,5 +874,32 @@ def agent_update_task_status(request, task_id):
         task.save()
         
         return Response({'message': 'Task status updated successfully'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@csrf_exempt
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_payment_status(request, payment_id):
+    """Update payment status (e.g., to COD)"""
+    try:
+        new_status = request.data.get('status')
+        
+        if not new_status:
+            return Response({'message': 'Status is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find the payment
+        try:
+            payment = Payment.objects.get(id=payment_id)
+        except Payment.DoesNotExist:
+            return Response({'message': 'Payment not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if new_status not in ['initiated', 'cod', 'completed', 'failed']:
+            return Response({'message': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        payment.status = new_status
+        payment.save()
+        
+        return Response({'message': 'Payment status updated successfully'}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

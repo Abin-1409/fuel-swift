@@ -3,7 +3,7 @@ from .views import (
     register, login_view, service_list, service_create, service_detail, create_service_request, get_service_by_type, user_list, user_delete, air_service_prices, electric_service_prices, mechanical_service_prices, agent_registration_request, agent_registration_requests, accept_agent_registration_request, agent_registration_status,
     create_razorpay_order, verify_razorpay_payment, available_mechanics, available_air_technicians, available_electric_chargers,
     service_requests_list, update_service_request_status, assign_agent_to_request, available_agents,
-    agent_assigned_tasks, agent_dashboard_stats, agent_update_task_status
+    agent_assigned_tasks, agent_dashboard_stats, agent_update_task_status, update_payment_status
 )
 
 urlpatterns = [
@@ -37,4 +37,6 @@ urlpatterns = [
     path('api/agent/assigned-tasks/', agent_assigned_tasks, name='agent_assigned_tasks'),
     path('api/agent/dashboard-stats/', agent_dashboard_stats, name='agent_dashboard_stats'),
     path('api/agent/tasks/<int:task_id>/update-status/', agent_update_task_status, name='agent_update_task_status'),
+    # Payment URLs
+    path('api/payment/<int:payment_id>/update-status/', update_payment_status, name='update_payment_status'),
 ]
