@@ -6,15 +6,6 @@ import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    activeServices: 0,
-    pendingRequests: 0,
-    revenue: 0
-  });
-
-
-
   const [agentRequests, setAgentRequests] = useState([]);
   const [agentReqLoading, setAgentReqLoading] = useState(false);
   const [agentReqError, setAgentReqError] = useState("");
@@ -88,91 +79,22 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-sm font-medium">Total Users</p>
-                <p className="text-3xl font-bold">{stats.totalUsers.toLocaleString()}</p>
-              </div>
-              <div className="text-4xl">👥</div>
-            </div>
-            <div className="mt-4 flex items-center text-blue-100 text-sm">
-              <span className="text-gray-300">No data available</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-sm font-medium">Active Services</p>
-                <p className="text-3xl font-bold">{stats.activeServices}</p>
-              </div>
-              <div className="text-4xl">⚡</div>
-            </div>
-            <div className="mt-4 flex items-center text-green-100 text-sm">
-              <span className="text-gray-300">No data available</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-yellow-100 text-sm font-medium">Pending Requests</p>
-                <p className="text-3xl font-bold">{stats.pendingRequests}</p>
-              </div>
-              <div className="text-4xl">⏳</div>
-            </div>
-            <div className="mt-4 flex items-center text-yellow-100 text-sm">
-              <span className="text-gray-300">No data available</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm font-medium">Revenue</p>
-                <p className="text-3xl font-bold">${stats.revenue.toLocaleString()}</p>
-              </div>
-              <div className="text-4xl">💰</div>
-            </div>
-            <div className="mt-4 flex items-center text-purple-100 text-sm">
-              <span className="text-gray-300">No data available</span>
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Service Statistics */}
-        </div>
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 text-center"
+        >
+          <h1 className="text-4xl font-bold text-white mb-4">Admin Dashboard</h1>
+          <p className="text-gray-300 text-lg">Manage your fuel service platform</p>
+        </motion.div>
 
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1 }}
-          className="mt-8 bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-gray-700"
+          transition={{ delay: 0.2 }}
+          className="mb-8 bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-gray-700"
         >
           <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -211,8 +133,8 @@ export default function AdminDashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2 }}
-          className="mt-8 bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-gray-700"
+          transition={{ delay: 0.4 }}
+          className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-gray-700"
         >
           <h2 className="text-xl font-bold text-white mb-6">Pending Agent Registrations</h2>
           {agentReqLoading && <div className="text-blue-200 mb-4">Loading...</div>}
@@ -243,18 +165,20 @@ export default function AdminDashboard() {
                   )}
                   <p className="text-gray-400 text-xs mt-1">Requested: {new Date(req.created_at).toLocaleString()}</p>
                 </div>
-                <button
-                  onClick={() => handleAcceptAgent(req.id)}
-                  className="mt-4 md:mt-0 md:ml-6 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => handleRejectAgent(req.id)}
-                  className="mt-4 md:mt-0 md:ml-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
-                >
-                  Reject
-                </button>
+                <div className="flex space-x-2 mt-4 md:mt-0">
+                  <button
+                    onClick={() => handleAcceptAgent(req.id)}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleRejectAgent(req.id)}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    register, login_view, service_list, service_create, service_detail, create_service_request, get_service_by_type, user_list, user_delete, air_service_prices, electric_service_prices, mechanical_service_prices, agent_registration_request, agent_registration_requests, accept_agent_registration_request, agent_registration_status,
+    register, login_view, service_list, service_create, service_detail, create_service_request, calculate_service_amount, get_service_by_type, user_list, user_delete, air_service_prices, electric_service_prices, mechanical_service_prices, agent_registration_request, agent_registration_requests, accept_agent_registration_request, agent_registration_status,
     create_razorpay_order, verify_razorpay_payment, available_mechanics, available_air_technicians, available_electric_chargers,
     service_requests_list, update_service_request_status, assign_agent_to_request, available_agents,
     agent_assigned_tasks, agent_dashboard_stats, agent_update_task_status, update_payment_status
@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/services/', service_list, name='service_list'),
     path('api/services/create/', service_create, name='service_create'),
     path('api/services/<int:pk>/', service_detail, name='service_detail'),
+    path('api/service-request/calculate/', calculate_service_amount, name='calculate_service_amount'),
     path('api/service-request/create/', create_service_request, name='create_service_request'),
     path('api/services/type/<str:service_type>/', get_service_by_type, name='get_service_by_type'),
     path('api/users/', user_list, name='user_list'),

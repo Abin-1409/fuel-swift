@@ -9,6 +9,68 @@ import { motion } from 'framer-motion';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// Admin pages that should not show the regular navbar
+const ADMIN_PAGES = [
+  '/admin_dashboard',
+  '/request_management',
+  '/agent_list',
+  '/service_management',
+  '/user_list'
+];
+
+function AdminHeader() {
+  const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
+    }
+  }, []);
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('firstName');
+      localStorage.removeItem('userType');
+      setIsLoggedIn(false);
+      window.location.href = '/';
+    }
+  };
+
+  const handleBack = () => {
+    window.history.back();
+  };
+
+  return (
+    <nav className="bg-gray-800 text-white shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center">
+            <button
+              onClick={handleBack}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+            >
+              <span>←</span>
+              <span>Back</span>
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <span className="text-lg font-semibold">Admin Panel</span>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 function NavBar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -247,10 +309,13 @@ function NavBar() {
 }
 
 export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const isAdminPage = ADMIN_PAGES.includes(pathname);
+
   return (
     <html lang="en">
       <body className={inter.className}>
-        <NavBar />
+        {isAdminPage ? <AdminHeader /> : <NavBar />}
         <main>{children}</main>
       </body>
     </html>

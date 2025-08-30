@@ -130,9 +130,60 @@ def service_detail(request, pk):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def calculate_service_amount(request):
+    """Calculate service amount without creating request"""
+    try:
+        data = request.data
+        
+        # Get service
+        service_type = data.get('service_type')
+        try:
+            service = Service.objects.get(type=service_type, status='active')
+        except Service.DoesNotExist:
+            return Response({'message': 'Service not available'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate quantity and amount
+        quantity_liters = data.get('quantity_liters')
+        amount_rupees = data.get('amount_rupees')
+        total_amount = 0
+
+        if service.type in ['petrol', 'diesel']:
+            if quantity_liters:
+                quantity_liters = Decimal(quantity_liters)
+                total_amount = quantity_liters * service.price
+                amount_rupees = total_amount
+            elif amount_rupees:
+                amount_rupees = Decimal(amount_rupees)
+                quantity_liters = amount_rupees / service.price
+                total_amount = amount_rupees
+            else:
+                return Response({'message': 'Either quantity_liters or amount_rupees must be provided'}, status=status.HTTP_400_BAD_REQUEST)
+            # Add service charge to fuel services
+            total_amount += service.service_charge
+        else:
+            # For non-fuel services, use total_amount from frontend (which already includes service charge)
+            total_amount = Decimal(data.get('total_amount', 0))
+        
+        # Check stock for fuel services
+        if service.type in ['petrol', 'diesel'] and quantity_liters > service.stock:
+            return Response({'message': f'Only {service.stock} liters available'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'total_amount': str(total_amount),
+            'service_charge': str(service.service_charge),
+            'price_per_liter': str(service.price) if service.type in ['petrol', 'diesel'] else None
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        print('DEBUG: Error in calculate_service_amount:', str(e))
+        return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def create_service_request(request):
     print('DEBUG: Received service request data:', request.data)
-    """Create a new service request"""
+    """Create a new service request after payment choice"""
     try:
         data = request.data
         
@@ -203,15 +254,21 @@ def create_service_request(request):
             service.stock -= quantity_liters
             service.save()
         
-        # Create Payment object (status: initiated)
-        payment_method = data.get('payment_method', 'initiated')  # 'cod' or 'initiated'
-        payment_status = 'cod' if payment_method == 'cod' else 'initiated'
+        # Create Payment object with proper status based on payment method
+        payment_method = data.get('payment_method', 'razorpay')
+        if payment_method == 'cod':
+            payment_status = 'cod'
+        elif payment_method == 'razorpay':
+            payment_status = 'success'  # If using Razorpay, payment is already successful
+        else:
+            payment_status = 'initiated'
+            
         payment = Payment.objects.create(
             user=user,
             service_request=service_request,
             amount=total_amount,
             status=payment_status,
-            method=payment_method if payment_method else 'razorpay',
+            method=payment_method,
         )
         
         serializer = ServiceRequestSerializer(service_request)

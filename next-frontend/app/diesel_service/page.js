@@ -148,17 +148,68 @@ export default function DieselService() {
         location_lng: location.lng,
         notes: formData.notes
       };
+      
+      // Calculate amount first without creating service request
+      const response = await fetch(`${API_BASE_URL}/api/service-request/calculate/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRealAmount(Number(data.total_amount));
+        // Store form data for later use when creating service request
+        setFormData(prev => ({ ...prev, calculatedAmount: data.total_amount }));
+        setShowPaymentOptions(true);
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to calculate amount');
+        setNotification({
+          show: true,
+          message: data.message || 'Failed to calculate amount',
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      setError('An error occurred while calculating amount');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePayLater = async () => {
+    // Create service request with COD payment method
+    setIsSubmitting(true);
+    try {
+      const requestData = {
+        service_type: 'diesel',
+        user_email: userEmail,
+        vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
+        quantity_liters: formData.quantityLiters || null,
+        amount_rupees: formData.amountRupees || null,
+        delivery_time: formData.deliveryTime,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        notes: formData.notes,
+        payment_method: 'cod'
+      };
+      
       const response = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
       });
+      
       if (response.ok) {
-        const data = await response.json();
-        setPaymentId(data.payment_id);
-        setServiceRequestId(data.request.id);
-        setRealAmount(Number(data.total_amount));
-        setShowPaymentOptions(true);
+        setShowPaymentOptions(false);
+        setShowConfirmation(true);
+        setNotification({
+          show: true,
+          message: 'Request submitted successfully! Admin will assign a mechanic in your area. Please wait.',
+          type: 'success'
+        });
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to submit request');
@@ -173,30 +224,6 @@ export default function DieselService() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handlePayLater = async () => {
-    // Update payment status to COD for existing service request
-    setIsSubmitting(true);
-    try {
-      await fetch(`${API_BASE_URL}/api/payment/${paymentId}/update-status/`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'cod' }),
-      });
-    } catch (err) {
-      console.error('Error updating payment status:', err);
-    }
-    setShowPaymentOptions(false);
-    setShowConfirmation(true);
-    setNotification({
-      show: true,
-      message: 'Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
-      type: 'success'
-    });
-    setIsSubmitting(false);
   };
 
   const handleRazorpayOpen = async () => {
@@ -216,8 +243,10 @@ export default function DieselService() {
   };
 
   const handleRazorpaySuccess = async (response) => {
+    // Call backend to verify payment and create service request
     setIsSubmitting(true);
     try {
+      // First verify the payment
       await fetch(`${API_BASE_URL}/api/payment/verify/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,15 +257,50 @@ export default function DieselService() {
           payment_db_id: paymentId
         })
       });
-    } catch (err) {}
-    setShowPaymentOptions(false);
-    setShowConfirmation(true);
-    setNotification({
-      show: true,
-      message: 'Payment successful! Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
-      type: 'success'
-    });
-    setIsSubmitting(false);
+      
+      // Then create service request with successful payment
+      const requestData = {
+        service_type: 'diesel',
+        user_email: userEmail,
+        vehicle_type: formData.vehicleType,
+        vehicle_number: formData.vehicleNumber,
+        quantity_liters: formData.quantityLiters || null,
+        amount_rupees: formData.amountRupees || null,
+        delivery_time: formData.deliveryTime,
+        location_lat: location.lat,
+        location_lng: location.lng,
+        notes: formData.notes,
+        payment_method: 'razorpay'
+      };
+      
+      const serviceResponse = await fetch(`${API_BASE_URL}/api/service-request/create/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+      });
+      
+      if (serviceResponse.ok) {
+        setShowPaymentOptions(false);
+        setShowConfirmation(true);
+        setNotification({
+          show: true,
+          message: 'Payment successful! Request submitted to admin. Admin will assign a mechanic in your area. Please wait.',
+          type: 'success'
+        });
+      } else {
+        const data = await serviceResponse.json();
+        setError(data.message || 'Failed to create service request');
+        setNotification({
+          show: true,
+          message: data.message || 'Failed to create service request',
+          type: 'error'
+        });
+      }
+    } catch (err) {
+      setError('Failed to process payment and create request');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRazorpayFailure = () => {
@@ -262,35 +326,127 @@ export default function DieselService() {
 
   if (showPaymentOptions) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold mb-4">Choose Payment Option</h2>
-          <p className="mb-6 text-gray-600">How would you like to pay for your service?</p>
-          <button
-            onClick={async () => { await handleRazorpayOpen(); }}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mb-4"
-            disabled={isSubmitting}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full text-center border border-gray-100"
+        >
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="mb-8"
           >
-            Pay Now (Razorpay)
-          </button>
-          {orderId && (
-            <RazorpayButton
-              amount={realAmount}
-              orderId={orderId}
-              user={{ name: '', email: userEmail || '', phone: '' }}
-              onSuccess={handleRazorpaySuccess}
-              onFailure={handleRazorpayFailure}
-              buttonText="Proceed to Pay"
-            />
-          )}
-          <button
-            onClick={handlePayLater}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-            disabled={isSubmitting}
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">💳</span>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Choose Payment Option</h2>
+            <p className="text-gray-600 text-lg">How would you like to pay for your service?</p>
+            <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-sm text-blue-800 font-medium">Total Amount</p>
+              <p className="text-2xl font-bold text-blue-600">₹{realAmount?.toFixed(2) || '0.00'}</p>
+            </div>
+          </motion.div>
+
+          {/* Payment Options */}
+          <div className="space-y-4">
+            {/* Pay Now Option */}
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              onClick={async () => { await handleRazorpayOpen(); }}
+              className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-2xl p-6 transition-all duration-300 transform hover:scale-105 hover:shadow-xl border-0 focus:outline-none focus:ring-4 focus:ring-blue-300"
+              disabled={isSubmitting}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-xl">⚡</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-bold">Pay Now</h3>
+                    <p className="text-blue-100 text-sm">Instant payment via Razorpay</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-blue-100">Secure</div>
+                  <div className="text-xs text-blue-200">Instant</div>
+                </div>
+              </div>
+              {isSubmitting && (
+                <div className="absolute inset-0 bg-blue-800/50 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+            </motion.button>
+
+            {/* Razorpay Button (if order created) */}
+            {orderId && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4, duration: 0.3 }}
+                className="mt-4"
+              >
+                <RazorpayButton
+                  amount={realAmount}
+                  orderId={orderId}
+                  user={{ name: '', email: userEmail || '', phone: '' }}
+                  onSuccess={handleRazorpaySuccess}
+                  onFailure={handleRazorpayFailure}
+                  buttonText="Proceed to Pay"
+                />
+              </motion.div>
+            )}
+
+            {/* Pay Later Option */}
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              onClick={handlePayLater}
+              className="w-full group relative overflow-hidden bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-2xl p-6 transition-all duration-300 transform hover:scale-105 hover:shadow-xl border-0 focus:outline-none focus:ring-4 focus:ring-gray-300"
+              disabled={isSubmitting}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-xl">🕒</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-bold">Pay Later</h3>
+                    <p className="text-gray-100 text-sm">Cash on Delivery</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-100">Flexible</div>
+                  <div className="text-xs text-gray-200">COD</div>
+                </div>
+              </div>
+              {isSubmitting && (
+                <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+            </motion.button>
+          </div>
+
+          {/* Back Button */}
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.3 }}
+            onClick={() => setShowPaymentOptions(false)}
+            className="mt-6 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors"
           >
-            Pay Later (Cash on Delivery)
-          </button>
-        </div>
+            ← Back to form
+          </motion.button>
+        </motion.div>
+
         <Notification
           message={notification.message}
           type={notification.type}
